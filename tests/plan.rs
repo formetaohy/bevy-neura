@@ -13,6 +13,17 @@ fn a_plan_names_every_host_extent_it_binds() {
 }
 
 #[test]
+fn a_plan_names_its_outputs_as_roles() {
+    let _ = ModelPlan::build(|graph| {
+        let observation = graph.input(Shape::matrix(2, 2), Element::Single);
+        let prediction = graph.mul(observation, graph.fill(Shape::scalar(), 2.0));
+        Roles::new()
+            .input("observation", observation)
+            .output("prediction", prediction)
+    });
+}
+
+#[test]
 #[should_panic(expected = "a model names the axes")]
 fn a_plan_that_names_no_extent_of_its_graph_panics() {
     let _ = ModelPlan::build(|graph| {
@@ -50,6 +61,29 @@ fn two_inputs_answer_to_one_role_once() {
         Roles::new()
             .input("observation", observation)
             .input("observation", observation)
+    });
+}
+
+#[test]
+#[should_panic(expected = "two outputs answer to the role prediction")]
+fn two_outputs_answer_to_one_role_once() {
+    let _ = ModelPlan::build(|graph| {
+        let observation = graph.input(Shape::matrix(4, 2), Element::Single);
+        Roles::new()
+            .output("prediction", observation)
+            .output("prediction", observation)
+    });
+}
+
+#[test]
+#[should_panic(expected = "names one tensor of a model")]
+fn a_role_that_names_two_tensors_reaches_no_plan() {
+    let _ = ModelPlan::build(|graph| {
+        let observation = graph.input(Shape::matrix(2, 2), Element::Single);
+        let scaled = graph.mul(observation, graph.fill(Shape::scalar(), 2.0));
+        Roles::new()
+            .input("tensor", observation)
+            .output("tensor", scaled)
     });
 }
 

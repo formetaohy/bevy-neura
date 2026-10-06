@@ -1,22 +1,12 @@
-use crate::handle::NeuraHandle;
-use crate::report::NeuraReport;
-use crate::system;
-use bevy::prelude::{App, Plugin, PreStartup, PreUpdate};
-use neura::{GpuRequest, RuntimeRequest};
+use crate::runtime::NeuraRuntime;
+use bevy::prelude::{App, Plugin};
+use neura::RuntimeRequest;
 
-pub struct NeuraPlugin {
-    gpu: GpuRequest,
-    heap_bytes: u64,
-    readback_bytes: u64,
-}
+pub struct NeuraPlugin(NeuraRuntime);
 
 impl NeuraPlugin {
     pub fn new(request: RuntimeRequest) -> Self {
-        Self {
-            gpu: request.gpu,
-            heap_bytes: request.heap_bytes,
-            readback_bytes: request.readback_bytes,
-        }
+        Self(NeuraRuntime::open(request))
     }
 }
 
@@ -28,14 +18,6 @@ impl Default for NeuraPlugin {
 
 impl Plugin for NeuraPlugin {
     fn build(&self, app: &mut App) {
-        let request = RuntimeRequest {
-            gpu: self.gpu.clone(),
-            heap_bytes: self.heap_bytes,
-            readback_bytes: self.readback_bytes,
-        };
-        app.insert_resource(NeuraHandle::spawn(request))
-            .add_message::<NeuraReport>()
-            .add_systems(PreStartup, system::open_device)
-            .add_systems(PreUpdate, system::drain_reports);
+        app.insert_resource(self.0.clone());
     }
 }
