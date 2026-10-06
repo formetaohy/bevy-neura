@@ -9,7 +9,7 @@
 <p align="center">
   <a href="https://github.com/formetaohy/bevy-neura/actions/workflows/ci.yml"><img src="https://github.com/formetaohy/bevy-neura/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/language-Rust-orange?logo=rust" alt="Rust"></a>
-  <a href="https://bevy.org/"><img src="https://img.shields.io/badge/bevy-0.19-blue?logo=bevy" alt="Bevy"></a>
+  <a href="https://bevy.org/"><img src="https://img.shields.io/badge/dynamic/toml?url=https://raw.githubusercontent.com/formetaohy/bevy-neura/main/Cargo.toml&amp;query=$.dependencies.bevy.version&amp;label=bevy&amp;color=blue&amp;logo=bevy" alt="Bevy"></a>
   <a href="https://crates.io/crates/bevy-neura"><img src="https://img.shields.io/crates/v/bevy-neura?label=bevy-neura&amp;color=blueviolet" alt="bevy-neura"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="MIT license"></a>
 </p>
