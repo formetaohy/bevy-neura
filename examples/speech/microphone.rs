@@ -1,4 +1,5 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::{FromSample, Sample, SizedSample};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex, mpsc};
 
@@ -14,16 +15,14 @@ impl Microphone {
         let samples = Arc::new(Mutex::new(VecDeque::new()));
         let (ready, waiting) = mpsc::channel();
         let buffer = Arc::clone(&samples);
-        std::thread::spawn(move || {
-            let opened = listen(buffer);
-            match &opened {
-                Ok((rate, _stream)) => {
-                    let _ = ready.send(Ok(*rate));
-                    std::thread::park();
-                }
-                Err(error) => {
-                    let _ = ready.send(Err(error.clone()));
-                }
+        std::thread::spawn(move || match listen(buffer) {
+            Ok((rate, stream)) => {
+                let _ = ready.send(Ok(rate));
+                let _held = stream;
+                std::thread::park();
+            }
+            Err(error) => {
+                let _ = ready.send(Err(error));
             }
         });
         let rate = waiting
@@ -55,53 +54,20 @@ fn listen(buffer: Arc<Mutex<VecDeque<f32>>>) -> Result<(u32, cpal::Stream), Stri
         .default_input_config()
         .map_err(|error| format!("the microphone reads no configuration: {error}"))?;
     let rate = supported.sample_rate();
-    let channels = supported.channels() as usize;
-    let config = supported.config();
-    let hold = Arc::clone(&buffer);
-    let push = move |frames: &[f32]| {
-        let mut samples = hold.lock().unwrap_or_else(|error| error.into_inner());
-        for frame in frames.chunks(channels) {
-            samples.push_back(frame.iter().sum::<f32>() / channels as f32);
-        }
-        let ceiling = HOLD * rate as usize;
-        while samples.len() > ceiling {
-            samples.pop_front();
-        }
+    let capture = Capture {
+        samples: buffer,
+        channels: supported.channels() as usize,
+        ceiling: HOLD * rate as usize,
     };
-    let errors = |error| eprintln!("the microphone reports {error}");
     let stream = match supported.sample_format() {
-        cpal::SampleFormat::F32 => device.build_input_stream(
-            config,
-            move |frames: &[f32], _: &cpal::InputCallbackInfo| push(frames),
-            errors,
-            None,
-        ),
-        cpal::SampleFormat::I16 => device.build_input_stream(
-            config,
-            move |frames: &[i16], _: &cpal::InputCallbackInfo| {
-                push(
-                    &frames
-                        .iter()
-                        .map(|frame| *frame as f32 / 32768.0)
-                        .collect::<Vec<f32>>(),
-                )
-            },
-            errors,
-            None,
-        ),
-        cpal::SampleFormat::U16 => device.build_input_stream(
-            config,
-            move |frames: &[u16], _: &cpal::InputCallbackInfo| {
-                push(
-                    &frames
-                        .iter()
-                        .map(|frame| *frame as f32 / 32768.0 - 1.0)
-                        .collect::<Vec<f32>>(),
-                )
-            },
-            errors,
-            None,
-        ),
+        cpal::SampleFormat::F32 => open::<f32>(&device, supported.config(), capture),
+        cpal::SampleFormat::F64 => open::<f64>(&device, supported.config(), capture),
+        cpal::SampleFormat::I8 => open::<i8>(&device, supported.config(), capture),
+        cpal::SampleFormat::I16 => open::<i16>(&device, supported.config(), capture),
+        cpal::SampleFormat::I32 => open::<i32>(&device, supported.config(), capture),
+        cpal::SampleFormat::U8 => open::<u8>(&device, supported.config(), capture),
+        cpal::SampleFormat::U16 => open::<u16>(&device, supported.config(), capture),
+        cpal::SampleFormat::U32 => open::<u32>(&device, supported.config(), capture),
         format => return Err(format!("the microphone reads {format}")),
     }
     .map_err(|error| format!("the microphone does not stream: {error}"))?;
@@ -109,4 +75,50 @@ fn listen(buffer: Arc<Mutex<VecDeque<f32>>>) -> Result<(u32, cpal::Stream), Stri
         .play()
         .map_err(|error| format!("the microphone does not play: {error}"))?;
     Ok((rate, stream))
+}
+
+fn open<T>(
+    device: &cpal::Device,
+    config: cpal::StreamConfig,
+    capture: Capture,
+) -> Result<cpal::Stream, cpal::Error>
+where
+    T: SizedSample,
+    f32: FromSample<T>,
+{
+    device.build_input_stream(
+        config,
+        move |frames: &[T], _: &cpal::InputCallbackInfo| capture.push(frames),
+        |error| eprintln!("the microphone reports {error}"),
+        None,
+    )
+}
+
+struct Capture {
+    samples: Arc<Mutex<VecDeque<f32>>>,
+    channels: usize,
+    ceiling: usize,
+}
+
+impl Capture {
+    fn push<T>(&self, frames: &[T])
+    where
+        T: SizedSample,
+        f32: FromSample<T>,
+    {
+        let mut samples = self
+            .samples
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        for frame in frames.chunks(self.channels) {
+            let sample = frame
+                .iter()
+                .map(|sample| f32::from_sample(*sample))
+                .sum::<f32>();
+            samples.push_back(sample / self.channels as f32);
+        }
+        while samples.len() > self.ceiling {
+            samples.pop_front();
+        }
+    }
 }

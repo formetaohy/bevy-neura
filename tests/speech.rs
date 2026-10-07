@@ -219,16 +219,10 @@ fn a_small_model_answers_the_reference() {
 #[test]
 fn a_downloaded_model_answers_the_reference() {
     let Some(reference) = std::env::var_os("SPEECH_REFERENCE_DIR").map(PathBuf::from) else {
-        eprintln!(
-            "a downloaded model is checked against SPEECH_REFERENCE_DIR and SPEECH_MODEL_DIR"
-        );
+        eprintln!("a downloaded model is checked against SPEECH_REFERENCE_DIR");
         return;
     };
-    let model = std::env::var_os("SPEECH_MODEL_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            Path::new(env!("CARGO_MANIFEST_DIR")).join("target/speech/whisper-tiny")
-        });
+    let model = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/speech/whisper-tiny");
     let store = bytes(reference.join("golden.safetensors"));
     let golden = SafeTensors::deserialize(&store).expect("golden");
     let audio = read_wave(&reference.join("speech.wav"));

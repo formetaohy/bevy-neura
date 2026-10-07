@@ -1,7 +1,10 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-pub const FILES: [&str; 5] = [
+pub const MODEL: &str = "openai/whisper-tiny";
+
+const ENDPOINT: &str = "https://huggingface.co";
+const FILES: [&str; 5] = [
     "config.json",
     "preprocessor_config.json",
     "vocab.json",
@@ -9,28 +12,11 @@ pub const FILES: [&str; 5] = [
     "model.safetensors",
 ];
 
-pub fn model() -> String {
-    std::env::var("SPEECH_MODEL").unwrap_or_else(|_| "openai/whisper-tiny".to_string())
-}
-
-pub fn endpoint() -> String {
-    std::env::var("SPEECH_MODEL_ENDPOINT")
-        .unwrap_or_else(|_| "https://huggingface.co".to_string())
-        .trim_end_matches('/')
-        .to_string()
-}
-
 pub fn directory() -> PathBuf {
-    match std::env::var_os("SPEECH_MODEL_DIR") {
-        Some(directory) => PathBuf::from(directory),
-        None => {
-            let name = model().replace('/', "--");
-            Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("target")
-                .join("speech")
-                .join(name)
-        }
-    }
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("target")
+        .join("speech")
+        .join("whisper-tiny")
 }
 
 pub fn ensure(directory: &Path) {
@@ -41,59 +27,29 @@ pub fn ensure(directory: &Path) {
     if missing.is_empty() {
         return;
     }
-    println!("fetching {} into {}", model(), directory.display());
+    println!("fetching {MODEL} into {}", directory.display());
     std::fs::create_dir_all(directory)
         .unwrap_or_else(|error| panic!("no directory of {}: {error}", directory.display()));
-    let endpoint = endpoint();
     for name in missing {
-        let url = format!("{endpoint}/{}/resolve/main/{name}", model());
+        let url = format!("{ENDPOINT}/{MODEL}/resolve/main/{name}");
         fetch(&url, &directory.join(name));
     }
 }
 
 fn fetch(url: &str, target: &Path) {
     println!("  {url}");
-    let attempts: [(&str, Vec<String>); 3] = [
-        (
-            "curl",
-            vec![
-                "-fL".to_string(),
-                "--progress-bar".to_string(),
-                "-o".to_string(),
-                target.display().to_string(),
-                url.to_string(),
-            ],
-        ),
-        (
-            "wget",
-            vec![
-                "-q".to_string(),
-                "-O".to_string(),
-                target.display().to_string(),
-                url.to_string(),
-            ],
-        ),
-        (
-            "powershell",
-            vec![
-                "-NoProfile".to_string(),
-                "-Command".to_string(),
-                format!(
-                    "Invoke-WebRequest -UseBasicParsing -Uri '{url}' -OutFile '{}'",
-                    target.display()
-                ),
-            ],
-        ),
-    ];
-    for (program, arguments) in attempts {
-        let Ok(status) = Command::new(program).args(&arguments).status() else {
-            continue;
-        };
-        assert!(
-            status.success(),
-            "{program} reads no response of {url}; check the network and SPEECH_MODEL_ENDPOINT",
-        );
-        return;
-    }
-    panic!("none of curl, wget and powershell answers {url}");
+    let part = target.with_extension("part");
+    let status = Command::new("curl")
+        .args(["-fL", "--progress-bar", "--retry", "3", "-o"])
+        .arg(&part)
+        .arg(url)
+        .status()
+        .unwrap_or_else(|error| panic!("curl reads no {url}: {error}"));
+    assert!(
+        status.success(),
+        "curl reads no response of {url}; fetch it by hand and write {}",
+        target.display(),
+    );
+    std::fs::rename(&part, target)
+        .unwrap_or_else(|error| panic!("no {}: {error}", target.display()));
 }

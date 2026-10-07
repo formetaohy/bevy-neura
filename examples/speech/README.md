@@ -1,23 +1,17 @@
 # speech
 
-A complete little game whose only control is your voice: hold the button (or the space bar), say
-`left`, `right`, `up`, `down`, `fire`, `freeze` or `restart`, and a local **Whisper** model reads
-what you said right inside the frame loop of a Bevy app.
+A little game whose only control is your voice: hold the space bar, say `left`, `right`, `up`,
+`down`, `fire`, `freeze` or `restart`, and a local **Whisper** model reads what you said right
+inside the frame loop of a Bevy app.
 
 ```sh
 cargo run --release --example speech
 ```
 
 The first run fetches `openai/whisper-tiny` (154 MB of config, vocabulary and weights) into
-`target/speech`, and every run after that reads it from there. The window opens with a loading
-notice, the model compiles, the microphone opens, and the arena appears.
-
-| Environment | Meaning |
-| --- | --- |
-| `SPEECH_MODEL` | the model to read, `openai/whisper-tiny` by default; `openai/whisper-base` and larger work too |
-| `SPEECH_MODEL_DIR` | a directory that already holds `config.json`, `preprocessor_config.json`, `vocab.json`, `added_tokens.json` and `model.safetensors` |
-| `SPEECH_MODEL_ENDPOINT` | what a fetch reads, `https://huggingface.co` by default; set `https://hf-mirror.com` where hugging face is out of reach |
-| `SPEECH_HEAP` | the megabytes of device heap the graph holds, 1024 by default; a model of 74 M numbers or more reads a larger figure |
+`target/speech/whisper-tiny`, and every run after that reads it from there. Nothing is configured:
+the model, its directory and the device heap are constants of the example, and a machine that
+already holds the five files of the checkpoint in that directory never reaches the network.
 
 ## The game
 
@@ -26,10 +20,20 @@ closest pursuer within reach, `freeze` stops them for a moment, and each burnt p
 points. Three pursuers reach the square and the run is over: say `restart` or press `R`. Arrow
 keys and `WASD` steer as well, which is how the game is checked without a microphone.
 
+Three lines at the corner of the window carry the whole of the interface: the score, the life and
+what the model is doing, then what it heard and how that reads as an order, then the words it
+listens for:
+
+```
+score 20   life 2   [listening]
+heard "move left" -> left
+hold SPACE and say left, right, up, down, fire, freeze or restart
+```
+
 ## How a reading runs
 
-The microphone streams 48 kHz frames into a bounded ring, the press of the button drains that ring
-into an utterance, and the release reads it:
+The microphone streams 48 kHz frames into a bounded ring, the press of the space bar drains that
+ring into an utterance, and the release reads it:
 
 1. a resampler of windowed sinc taps carries the utterance to the 16 kHz Whisper reads (32 taps,
    a Blackman window, one phase table per 44.1 kHz or 48 kHz device);
@@ -114,3 +118,5 @@ logits and the tokens of a reading a checkpoint of the graph must answer.
 * Everything is on the thread of the frame loop: the microphone streams on the thread of the host
   its device hands it, and a reading of one utterance stalls its frame for the length of the encoder
   alone.
+* Bevy embeds a font of ASCII glyphs, so the labels of the window stay in ASCII; text of another
+  script reads as blanks unless a font of its own is loaded.
