@@ -25,6 +25,10 @@
 - **Kernel Compiler**: Write custom kernels in Rust; Neura generates SPIR-V, HLSL, and MSL, so you do not maintain separate shader implementations.
 - **High Performance**: End-to-end optimization for fast training and inference with a small memory footprint.
 
+## Documents
+
+- **[Examples](examples)**: See how to integrate AI into your game.
+
 ## Contact
 
 Email: formetaohy@gmail.com

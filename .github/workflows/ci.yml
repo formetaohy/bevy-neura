@@ -25,8 +25,8 @@ jobs:
       - name: Cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Install software Vulkan driver
-        run: sudo apt-get update && sudo apt-get install -y libvulkan1 mesa-vulkan-drivers
+      - name: Install software Vulkan driver and audio
+        run: sudo apt-get update && sudo apt-get install -y libvulkan1 mesa-vulkan-drivers libasound2-dev libudev-dev
 
       - name: Check formatting
         run: cargo fmt --check
