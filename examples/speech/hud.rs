@@ -102,7 +102,7 @@ pub fn paint(
             Hud::Score => format!("score {}   best {}", game.score(), game.best()),
             Hud::Voice => format!("[{}] {voice}", speech.state()),
             Hud::Notice => notice(game.stage()).to_string(),
-            Hud::Hint => "say fly to flap - space does the same".to_string(),
+            Hud::Hint => "say fly to flap".to_string(),
         };
         color.0 = match hud {
             Hud::Voice if speech.busy() => HUD_HOT,

@@ -83,15 +83,11 @@ impl Game {
     }
 }
 
-pub fn direct(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut utterances: MessageReader<Utterance>,
-    mut game: ResMut<Game>,
-) {
-    let spoken = utterances
+pub fn direct(mut utterances: MessageReader<Utterance>, mut game: ResMut<Game>) {
+    if utterances
         .read()
-        .any(|utterance| Flap::read(&utterance.text).is_some());
-    if spoken || keys.just_pressed(KeyCode::Space) {
+        .any(|utterance| Flap::read(&utterance.text).is_some())
+    {
         game.requested = true;
     }
 }

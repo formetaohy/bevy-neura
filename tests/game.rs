@@ -26,7 +26,6 @@ const AIM: f32 = 30.0;
 fn app() -> App {
     let mut app = App::new();
     app.init_resource::<Game>();
-    app.init_resource::<ButtonInput<KeyCode>>();
     app.insert_resource(Assets::<Mesh>::default());
     app.insert_resource(Assets::<ColorMaterial>::default());
     app.insert_resource(Time::<()>::default());
@@ -125,20 +124,6 @@ fn a_spoken_word_starts_the_run_and_lifts_the_bird() {
         bird_at(&mut app).y,
         bird::START_Y + 20.0,
     );
-}
-
-#[test]
-fn the_space_bar_flaps_as_the_word_does() {
-    let mut app = app();
-    tick(&mut app, 5);
-    app.world_mut()
-        .resource_mut::<ButtonInput<KeyCode>>()
-        .press(KeyCode::Space);
-    tick(&mut app, 1);
-    app.world_mut()
-        .resource_mut::<ButtonInput<KeyCode>>()
-        .clear();
-    assert_eq!(app.world().resource::<Game>().stage(), Stage::Play);
 }
 
 #[test]

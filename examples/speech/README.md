@@ -2,7 +2,7 @@
 
 A flappy bird whose only control is your voice: say `fly` (`飞` counts as well) and a local
 `openai/whisper-tiny` model reads the microphone and flaps the bird inside the frame loop of a Bevy
-app. The space bar flaps too, so the game plays without a voice.
+app. The window, the pipes and the score are a Bevy game; the only control is your voice.
 
 ```sh
 cargo run --release --example speech
@@ -11,8 +11,7 @@ cargo run --release --example speech
 ## Controls
 
 * say `fly` or `飞` for one flap, matched as words of whatever whisper reads, so `let me fly` counts
-  too, where `butterfly` does not;
-* press `space` for one flap.
+  too, where `butterfly` does not.
 
 The window names the score and the best run, what the microphone is doing (`waiting`, `listening`,
 `reading`, `transcribing`), the last transcript with whether it read a flap, and the state of a run:
