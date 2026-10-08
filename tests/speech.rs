@@ -4,8 +4,6 @@ use neura::{MemoryRequest, RuntimeRequest};
 use safetensors::SafeTensors;
 use std::path::{Path, PathBuf};
 
-#[path = "../examples/speech/direction.rs"]
-mod direction;
 #[path = "../examples/speech/mel.rs"]
 mod mel;
 #[path = "../examples/speech/model/mod.rs"]
@@ -245,27 +243,6 @@ fn a_downloaded_model_answers_the_reference() {
         .map(|token| token as u32)
         .collect::<Vec<u32>>();
     assert_eq!(issued, expected_tokens, "a reading names another token");
-}
-
-#[test]
-fn a_transcript_names_the_direction_it_holds() {
-    use direction::Direction;
-    assert_eq!(Direction::read(" Move left."), Some(Direction::Left));
-    assert_eq!(Direction::read("move right"), Some(Direction::Right));
-    assert_eq!(Direction::read("LEFT!"), Some(Direction::Left));
-    assert_eq!(Direction::read("go up"), Some(Direction::Up));
-    assert_eq!(Direction::read("down"), Some(Direction::Down));
-    assert_eq!(Direction::read("向左移动"), Some(Direction::Left));
-    assert_eq!(Direction::read("向右"), Some(Direction::Right));
-    assert_eq!(Direction::read("上面"), Some(Direction::Up));
-    assert_eq!(Direction::read("下去"), Some(Direction::Down));
-    assert_eq!(Direction::read("  "), None);
-    assert_eq!(Direction::read("[BIRDS CHIRPING]"), None);
-    assert_eq!(Direction::read("(sizzling)"), None);
-    assert_eq!(Direction::read("puppy"), None);
-    assert_eq!(Direction::read("stop"), None);
-    assert_eq!(Direction::Left.name(), "left");
-    assert_eq!(Direction::Down.name(), "down");
 }
 
 #[test]

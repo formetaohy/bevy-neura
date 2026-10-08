@@ -1,8 +1,8 @@
 # speech
 
-A pac-man whose only control is your voice: say `left`, `right`, `up` or `down`, and a local
-`openai/whisper-tiny` model reads the microphone and turns the pac inside the frame loop of a Bevy
-app. Arrow keys steer as well, so the game plays without a voice.
+A flappy bird whose only control is your voice: say `fly` (`飞` counts as well) and a local
+`openai/whisper-tiny` model reads the microphone and flaps the bird inside the frame loop of a Bevy
+app. The space bar flaps too, so the game plays without a voice.
 
 ```sh
 cargo run --release --example speech
@@ -10,14 +10,13 @@ cargo run --release --example speech
 
 ## Controls
 
-* say `left`, `right`, `up` or `down`, matched as words of whatever whisper reads, so `move left`
-  counts too;
-* press the arrow keys for the same four directions.
+* say `fly` or `飞` for one flap, matched as words of whatever whisper reads, so `let me fly` counts
+  too, where `butterfly` does not;
+* press `space` for one flap.
 
-The window names the score, level and lives, what the microphone is doing (`waiting`, `listening`,
-`reading`, `transcribing`), the last transcript with the direction it read, and the state of a run:
-`get ready`, `caught!`, `level cleared` or `game over - say a direction to play again`, where the
-next word opens a new run.
+The window names the score and the best run, what the microphone is doing (`waiting`, `listening`,
+`reading`, `transcribing`), the last transcript with whether it read a flap, and the state of a run:
+`say fly to take off` or `game over - say fly to fly again`, where the next word opens a new run.
 
 ## The first run
 
@@ -34,7 +33,8 @@ The download needs `curl` on the `PATH` and access to `huggingface.co`.
 * speech loud enough to open a reading (an rms of 0.01): an utterance closes after 0.35 s of quiet
   and reads at most five seconds of speech.
 
-A reading of one utterance stalls the frame for the length of the encoder alone, so the maze pauses
-instead of skipping. Windows hands the microphone a signal with the speakers cancelled out of it, so
-a reading of your own speakers is quieter than your own voice. Bevy embeds a font of ASCII glyphs,
-so a transcript of another script reads as blanks in the window.
+A reading of one utterance stalls the frame for the length of the encoder alone, so the bird hangs
+where it is instead of falling. Windows hands the microphone a signal with the speakers cancelled out
+of it, so a reading of your own speakers is quieter than your own voice. Bevy embeds a font of ASCII
+glyphs, so a transcript of another script reads as blanks in the window, and `飞` reaches the game
+without ever reaching the window.

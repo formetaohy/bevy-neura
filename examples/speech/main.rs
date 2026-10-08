@@ -1,18 +1,18 @@
-mod direction;
+mod bird;
+mod flap;
 mod game;
-mod ghost;
 mod hud;
 mod loading;
-mod maze;
 mod mel;
 mod microphone;
 mod model;
+mod pipe;
 mod resample;
 mod source;
 mod speech;
 mod tokenizer;
 mod utterance;
-mod walker;
+mod world;
 
 use bevy::prelude::*;
 use bevy_neura::NeuraPlugin;
@@ -33,7 +33,7 @@ fn main() {
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
-                    title: "voice pac-man - bevy-neura".to_string(),
+                    title: "voice flappy bird - bevy-neura".to_string(),
                     resolution: (720u32, 700u32).into(),
                     ..default()
                 }),
@@ -51,8 +51,7 @@ fn main() {
         .init_state::<Phase>()
         .init_resource::<game::Game>()
         .add_message::<utterance::Utterance>()
-        .insert_resource(ClearColor(Color::srgb(0.03, 0.03, 0.06)))
-        .add_systems(Startup, (game::setup, hud::setup))
+        .add_systems(Startup, (world::setup, bird::setup, hud::setup))
         .add_systems(OnEnter(Phase::Loading), loading::setup)
         .add_systems(OnExit(Phase::Loading), loading::clear)
         .add_systems(
@@ -68,7 +67,6 @@ fn main() {
                 speech::decode,
                 game::direct,
                 game::advance,
-                game::face,
                 hud::paint,
             )
                 .chain()

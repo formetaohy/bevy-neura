@@ -72,7 +72,7 @@ impl Loading {
 
     fn caption(&self) -> String {
         let mut lines = vec![
-            "voice pac-man".to_string(),
+            "voice flappy bird".to_string(),
             "whisper reads the microphone in the frame loop".to_string(),
             String::new(),
         ];
@@ -105,7 +105,7 @@ impl Loading {
             Step::Checkpoint => "the checkpoint, vocabulary and mel banks".to_string(),
             Step::Encoder => "the encoder behind the microphone".to_string(),
             Step::Decoder => "the decoder that names the words".to_string(),
-            Step::Microphone => "the microphone that feeds the maze".to_string(),
+            Step::Microphone => "the microphone that feeds the bird".to_string(),
         }
     }
 }
@@ -137,7 +137,7 @@ pub fn setup(mut commands: Commands) {
         },
         BackgroundColor(BACKDROP),
     ));
-    spawn_text(&mut commands, "voice pac-man", 34.0, 170.0, READY);
+    spawn_text(&mut commands, "voice flappy bird", 34.0, 170.0, READY);
     spawn_text(
         &mut commands,
         "whisper reads the microphone in the frame loop",

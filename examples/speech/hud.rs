@@ -1,4 +1,4 @@
-use crate::direction::Direction;
+use crate::flap::Flap;
 use crate::game::{Game, Stage};
 use crate::speech::Speech;
 use crate::utterance::Utterance;
@@ -55,13 +55,13 @@ pub fn setup(mut commands: Commands) {
     commands.spawn((
         Hud::Notice,
         Text::new(""),
-        font(20.0),
+        font(24.0),
         TextColor(HUD_COLOR),
         TextLayout::justify(Justify::Center),
         Node {
             position_type: PositionType::Absolute,
             width: Val::Percent(100.0),
-            top: Val::Px(370.0),
+            top: Val::Px(210.0),
             ..default()
         },
     ));
@@ -90,20 +90,19 @@ pub fn paint(
         format!(
             "heard \"{}\" -> {}",
             last.as_str(),
-            Direction::read(last.as_str()).map_or("nothing", Direction::name),
+            if Flap::read(last.as_str()).is_some() {
+                "flap"
+            } else {
+                "nothing"
+            },
         )
     };
     for (mut text, mut color, hud) in &mut huds {
         text.0 = match hud {
-            Hud::Score => format!(
-                "score {}   level {}   lives {}",
-                game.score(),
-                game.level(),
-                game.lives().max(0),
-            ),
+            Hud::Score => format!("score {}   best {}", game.score(), game.best()),
             Hud::Voice => format!("[{}] {voice}", speech.state()),
             Hud::Notice => notice(game.stage()).to_string(),
-            Hud::Hint => "say left, right, up or down, or press the arrow keys".to_string(),
+            Hud::Hint => "say fly to flap - space does the same".to_string(),
         };
         color.0 = match hud {
             Hud::Voice if speech.busy() => HUD_HOT,
@@ -114,10 +113,8 @@ pub fn paint(
 
 fn notice(stage: Stage) -> &'static str {
     match stage {
-        Stage::Ready(_) => "get ready",
-        Stage::Play => "",
-        Stage::Caught(_) => "caught!",
-        Stage::Cleared(_) => "level cleared",
-        Stage::Over => "game over - say a direction to play again",
+        Stage::Ready => "say fly to take off",
+        Stage::Play | Stage::Falling => "",
+        Stage::Over => "game over - say fly to fly again",
     }
 }
