@@ -1,5 +1,9 @@
-mod command;
+mod direction;
 mod game;
+mod ghost;
+mod hud;
+mod loading;
+mod maze;
 mod mel;
 mod microphone;
 mod model;
@@ -7,9 +11,11 @@ mod resample;
 mod source;
 mod speech;
 mod tokenizer;
+mod utterance;
+mod walker;
 
 use bevy::prelude::*;
-use bevy_neura::{NeuraPlugin, NeuraRuntime};
+use bevy_neura::NeuraPlugin;
 use neura::{MemoryRequest, RuntimeRequest};
 
 const DEVICE_HEAP: u64 = 1 << 30;
@@ -27,8 +33,8 @@ fn main() {
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
-                    title: "voice commander - bevy-neura".to_string(),
-                    resolution: (960u32, 660u32).into(),
+                    title: "voice pac-man - bevy-neura".to_string(),
+                    resolution: (720u32, 700u32).into(),
                     ..default()
                 }),
                 ..default()
@@ -44,37 +50,29 @@ fn main() {
         ))
         .init_state::<Phase>()
         .init_resource::<game::Game>()
-        .add_message::<speech::Transcription>()
-        .insert_resource(ClearColor(Color::srgb(0.05, 0.06, 0.09)))
-        .add_systems(Startup, game::setup)
-        .add_systems(Update, load.run_if(in_state(Phase::Loading)))
+        .add_message::<utterance::Utterance>()
+        .insert_resource(ClearColor(Color::srgb(0.03, 0.03, 0.06)))
+        .add_systems(Startup, (game::setup, hud::setup))
+        .add_systems(OnEnter(Phase::Loading), loading::setup)
+        .add_systems(OnExit(Phase::Loading), loading::clear)
+        .add_systems(
+            Update,
+            (loading::drive, loading::paint)
+                .chain()
+                .run_if(in_state(Phase::Loading)),
+        )
         .add_systems(
             Update,
             (
                 speech::listen,
                 speech::decode,
-                game::act,
-                game::steer,
-                game::spawn,
-                game::march,
-                game::strike,
-                game::paint,
+                game::direct,
+                game::advance,
+                game::face,
+                hud::paint,
             )
+                .chain()
                 .run_if(in_state(Phase::Playing)),
         )
         .run();
-}
-
-fn load(
-    runtime: Res<NeuraRuntime>,
-    mut commands: Commands,
-    mut phase: ResMut<NextState<Phase>>,
-    mut frames: Local<u32>,
-) {
-    *frames += 1;
-    if *frames < 2 {
-        return;
-    }
-    commands.insert_resource(speech::Speech::load(&runtime));
-    phase.set(Phase::Playing);
 }

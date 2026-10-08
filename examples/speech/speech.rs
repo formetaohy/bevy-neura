@@ -5,15 +5,42 @@ use crate::model::{DecoderModel, EncoderModel};
 use crate::resample::Resampler;
 use crate::source;
 use crate::tokenizer::{self, Vocabulary};
+use crate::utterance::Utterance;
 use bevy::prelude::*;
 use bevy_neura::NeuraRuntime;
+use std::path::Path;
 
-const UTTERANCE: usize = 30;
-const SILENCE: f32 = 0.004;
+const START: f32 = 0.01;
+const STOP: f32 = 0.006;
+const QUIET: f32 = 0.35;
+const LONGEST: f32 = 5.0;
 
-#[derive(Message)]
-pub struct Transcription {
-    pub text: String,
+pub struct Checkpoint {
+    pub dims: Dims,
+    pub mel: Mel,
+    pub vocabulary: Vocabulary,
+    weights: Vec<u8>,
+}
+
+impl Checkpoint {
+    pub fn read(directory: &Path) -> Self {
+        let dims = Dims::of(directory);
+        let mel = Mel::of(directory, dims.mel_bins);
+        let vocabulary = Vocabulary::of(directory);
+        let path = directory.join("model.safetensors");
+        let weights =
+            std::fs::read(&path).unwrap_or_else(|error| panic!("no {}: {error}", path.display()));
+        Self {
+            dims,
+            mel,
+            vocabulary,
+            weights,
+        }
+    }
+
+    pub fn weights(&self) -> &[u8] {
+        &self.weights
+    }
 }
 
 #[derive(Resource)]
@@ -27,6 +54,7 @@ pub struct Speech {
     dims: Dims,
     listening: Listening,
     utterance: Vec<f32>,
+    quiet: f32,
     prefix: Vec<u32>,
     issued: Vec<u32>,
     cursor: u32,
@@ -41,36 +69,32 @@ enum Listening {
 }
 
 impl Speech {
-    pub fn load(runtime: &NeuraRuntime) -> Self {
-        let directory = source::directory();
-        source::ensure(&directory);
-        let started = std::time::Instant::now();
-        let dims = Dims::of(&directory);
-        let weights = std::fs::read(directory.join("model.safetensors"))
-            .unwrap_or_else(|error| panic!("the checkpoint of {}: {error}", directory.display()));
-        let encoder = EncoderModel::load(runtime, &dims, &weights);
-        let decoder = DecoderModel::load(runtime, &dims, &weights);
-        let mel = Mel::of(&directory, dims.mel_bins);
-        let vocabulary = Vocabulary::of(&directory);
-        let microphone = Microphone::open();
+    pub fn open(
+        microphone: Microphone,
+        checkpoint: Checkpoint,
+        encoder: EncoderModel,
+        decoder: DecoderModel,
+    ) -> Self {
+        microphone.drain();
+        let prefix = vec![0; checkpoint.dims.prefix() as usize];
         println!(
-            "{}: {} layers of {} numbers, loaded in {:.1} s",
+            "{}: {} layers of {} numbers, listening at {} Hz",
             source::MODEL,
-            dims.encoder_layers + dims.decoder_layers,
-            dims.state,
-            started.elapsed().as_secs_f32(),
+            checkpoint.dims.encoder_layers + checkpoint.dims.decoder_layers,
+            checkpoint.dims.state,
+            microphone.rate(),
         );
-        let prefix = vec![0; dims.prefix() as usize];
         Self {
             resampler: Resampler::new(microphone.rate(), SAMPLE_RATE),
-            mel,
-            vocabulary,
+            mel: checkpoint.mel,
+            vocabulary: checkpoint.vocabulary,
             encoder,
             decoder,
             microphone,
-            dims,
+            dims: checkpoint.dims,
             listening: Listening::Idle,
             utterance: Vec::new(),
+            quiet: 0.0,
             prefix,
             issued: Vec::new(),
             cursor: 0,
@@ -79,7 +103,7 @@ impl Speech {
 
     pub fn state(&self) -> &'static str {
         match self.listening {
-            Listening::Idle => "idle",
+            Listening::Idle => "waiting",
             Listening::Recording => "listening",
             Listening::Detecting => "reading",
             Listening::Decoding => "transcribing",
@@ -90,42 +114,35 @@ impl Speech {
         !matches!(self.listening, Listening::Idle)
     }
 
-    fn begin(&mut self) {
-        self.microphone.drain();
+    fn begin(&mut self, block: &[f32]) {
         self.utterance.clear();
+        self.utterance.extend_from_slice(block);
+        self.quiet = 0.0;
         self.listening = Listening::Recording;
     }
 
-    fn capture(&mut self) {
-        let ceiling = UTTERANCE * self.microphone.rate() as usize;
-        let heard = self.microphone.drain();
-        self.utterance.extend(heard);
-        self.utterance.truncate(ceiling);
+    fn capture(&mut self, block: &[f32]) {
+        self.utterance.extend_from_slice(block);
+    }
+
+    fn elapse(&mut self, seconds: f32, loud: bool) {
+        self.quiet = if loud { 0.0 } else { self.quiet + seconds };
+    }
+
+    fn settled(&self) -> bool {
+        let seconds = self.utterance.len() as f32 / self.microphone.rate() as f32;
+        self.quiet >= QUIET || seconds >= LONGEST
     }
 
     fn finish(&mut self, runtime: &NeuraRuntime) {
         let seconds = self.utterance.len() as f32 / self.microphone.rate() as f32;
-        let energy = (self
-            .utterance
-            .iter()
-            .map(|sample| sample * sample)
-            .sum::<f32>()
-            / self.utterance.len().max(1) as f32)
-            .sqrt();
-        if energy < SILENCE {
-            self.listening = Listening::Idle;
-            println!(
-                "{seconds:.1} s of sound at rms {energy:.4}, quieter than the {SILENCE} a reading asks for"
-            );
-            return;
-        }
-        let start = std::time::Instant::now();
+        let started = std::time::Instant::now();
         let audio = self.resampler.resample(&self.utterance);
         let spectrogram = self.mel.spectrogram(&audio);
         let run = self.encoder.run(runtime, spectrogram);
         let cross = self.encoder.cross(runtime);
         self.decoder.carry(runtime, &cross);
-        let encoded = run.seconds() + start.elapsed().as_secs_f64();
+        let encoded = run.seconds() + started.elapsed().as_secs_f64();
         self.prefix = vec![0; self.dims.prefix() as usize];
         self.prefix[0] = tokenizer::SOT;
         self.issued.clear();
@@ -134,7 +151,7 @@ impl Speech {
         println!("{seconds:.1} s of speech, the encoder reads it in {encoded:.2} s");
     }
 
-    fn advance(&mut self, runtime: &NeuraRuntime) -> Option<Transcription> {
+    fn advance(&mut self, runtime: &NeuraRuntime) -> Option<Utterance> {
         let slots = self
             .prefix
             .iter()
@@ -176,33 +193,54 @@ impl Speech {
         }
     }
 
-    fn stop(&mut self) -> Transcription {
+    fn stop(&mut self) -> Utterance {
         let text = self.vocabulary.text(&self.issued).trim().to_string();
         self.listening = Listening::Idle;
         println!("heard: {text:?}");
-        Transcription { text }
+        Utterance { text }
     }
 }
 
-pub fn listen(
-    keys: Res<ButtonInput<KeyCode>>,
-    runtime: Res<NeuraRuntime>,
-    mut speech: ResMut<Speech>,
-) {
-    match (keys.pressed(KeyCode::Space), speech.listening) {
-        (true, Listening::Idle) => speech.begin(),
-        (true, Listening::Recording) => speech.capture(),
-        (false, Listening::Recording) => speech.finish(&runtime),
-        _ => {}
+pub fn listen(time: Res<Time>, runtime: Res<NeuraRuntime>, mut speech: ResMut<Speech>) {
+    let block = speech.microphone.drain();
+    if block.is_empty() {
+        if matches!(speech.listening, Listening::Recording) {
+            speech.elapse(time.delta_secs(), false);
+            if speech.settled() {
+                speech.finish(&runtime);
+            }
+        }
+        return;
+    }
+    let energy = rms(&block);
+    match speech.listening {
+        Listening::Idle => {
+            if energy >= START {
+                speech.begin(&block);
+            }
+        }
+        Listening::Recording => {
+            let seconds = block.len() as f32 / speech.microphone.rate() as f32;
+            speech.capture(&block);
+            speech.elapse(seconds, energy >= STOP);
+            if speech.settled() {
+                speech.finish(&runtime);
+            }
+        }
+        Listening::Detecting | Listening::Decoding => {}
     }
 }
 
 pub fn decode(
     runtime: Res<NeuraRuntime>,
     mut speech: ResMut<Speech>,
-    mut heard: MessageWriter<Transcription>,
+    mut utterances: MessageWriter<Utterance>,
 ) {
-    if let Some(transcription) = speech.advance(&runtime) {
-        heard.write(transcription);
+    if let Some(utterance) = speech.advance(&runtime) {
+        utterances.write(utterance);
     }
+}
+
+fn rms(block: &[f32]) -> f32 {
+    (block.iter().map(|sample| sample * sample).sum::<f32>() / block.len() as f32).sqrt()
 }

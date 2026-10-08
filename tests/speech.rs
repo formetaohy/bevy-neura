@@ -4,8 +4,8 @@ use neura::{MemoryRequest, RuntimeRequest};
 use safetensors::SafeTensors;
 use std::path::{Path, PathBuf};
 
-#[path = "../examples/speech/command.rs"]
-mod command;
+#[path = "../examples/speech/direction.rs"]
+mod direction;
 #[path = "../examples/speech/mel.rs"]
 mod mel;
 #[path = "../examples/speech/model/mod.rs"]
@@ -248,22 +248,24 @@ fn a_downloaded_model_answers_the_reference() {
 }
 
 #[test]
-fn a_transcript_names_the_command_it_holds() {
-    use command::Command;
-    assert_eq!(Command::read(" Move left."), Command::Left);
-    assert_eq!(Command::read("move right"), Command::Right);
-    assert_eq!(Command::read("FIRE!"), Command::Fire);
-    assert_eq!(Command::read("向左移动"), Command::Left);
-    assert_eq!(Command::read("开火"), Command::Fire);
-    assert_eq!(Command::read("冻结"), Command::Freeze);
-    assert_eq!(Command::read("restart"), Command::Restart);
-    assert_eq!(Command::read("  "), Command::Unknown);
-    assert_eq!(Command::read("[BIRDS CHIRPING]"), Command::Unknown);
-    assert_eq!(Command::read("(sizzling)"), Command::Unknown);
-    assert_eq!(Command::read("puppy"), Command::Unknown);
-    assert_eq!(Command::read("stop"), Command::Freeze);
-    assert_eq!(Command::read("freeze").name(), "freeze");
-    assert_eq!(Command::read("[BIRDS CHIRPING]").name(), "nothing");
+fn a_transcript_names_the_direction_it_holds() {
+    use direction::Direction;
+    assert_eq!(Direction::read(" Move left."), Some(Direction::Left));
+    assert_eq!(Direction::read("move right"), Some(Direction::Right));
+    assert_eq!(Direction::read("LEFT!"), Some(Direction::Left));
+    assert_eq!(Direction::read("go up"), Some(Direction::Up));
+    assert_eq!(Direction::read("down"), Some(Direction::Down));
+    assert_eq!(Direction::read("向左移动"), Some(Direction::Left));
+    assert_eq!(Direction::read("向右"), Some(Direction::Right));
+    assert_eq!(Direction::read("上面"), Some(Direction::Up));
+    assert_eq!(Direction::read("下去"), Some(Direction::Down));
+    assert_eq!(Direction::read("  "), None);
+    assert_eq!(Direction::read("[BIRDS CHIRPING]"), None);
+    assert_eq!(Direction::read("(sizzling)"), None);
+    assert_eq!(Direction::read("puppy"), None);
+    assert_eq!(Direction::read("stop"), None);
+    assert_eq!(Direction::Left.name(), "left");
+    assert_eq!(Direction::Down.name(), "down");
 }
 
 #[test]
