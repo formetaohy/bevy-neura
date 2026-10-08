@@ -1,17 +1,17 @@
 use bevy::prelude::*;
 use std::time::Duration;
 
-#[path = "../examples/speech/bird.rs"]
+#[path = "../examples/speechbird/bird.rs"]
 mod bird;
-#[path = "../examples/speech/flap.rs"]
+#[path = "../examples/speechbird/flap.rs"]
 mod flap;
-#[path = "../examples/speech/game.rs"]
+#[path = "../examples/speechbird/game.rs"]
 mod game;
-#[path = "../examples/speech/pipe.rs"]
+#[path = "../examples/speechbird/pipe.rs"]
 mod pipe;
-#[path = "../examples/speech/utterance.rs"]
+#[path = "../examples/speechbird/utterance.rs"]
 mod utterance;
-#[path = "../examples/speech/world.rs"]
+#[path = "../examples/speechbird/world.rs"]
 mod world;
 
 use bird::Bird;
@@ -26,11 +26,10 @@ const AIM: f32 = 30.0;
 fn app() -> App {
     let mut app = App::new();
     app.init_resource::<Game>();
-    app.insert_resource(Assets::<Mesh>::default());
-    app.insert_resource(Assets::<ColorMaterial>::default());
     app.insert_resource(Time::<()>::default());
     app.add_message::<Utterance>();
-    app.add_systems(Startup, (world::setup, bird::setup));
+    app.add_message::<game::Wingbeat>();
+    app.add_systems(Startup, bird::spawn);
     app.add_systems(Update, (game::direct, game::advance).chain());
     app.update();
     app
@@ -75,7 +74,7 @@ fn next_gap(app: &mut App) -> f32 {
 fn flap_through(app: &mut App, ticks: u32) {
     for _ in 0..ticks {
         if bird_at(app).y < next_gap(app) - AIM {
-            say(app, "fly");
+            say(app, "flap");
         }
         tick(app, 1);
     }
@@ -84,10 +83,10 @@ fn flap_through(app: &mut App, ticks: u32) {
 #[test]
 fn a_transcript_names_the_word_that_flaps() {
     for text in [
-        "fly",
-        " Fly!",
-        "let me fly",
-        "FLY.",
+        "flap",
+        " Flap!",
+        "let me flap",
+        "FLAP.",
         "飞",
         "飛",
         "飞一下",
@@ -98,8 +97,9 @@ fn a_transcript_names_the_word_that_flaps() {
     for text in [
         "",
         "  ",
-        "butterfly",
-        "flying",
+        "flapjack",
+        "flappy",
+        "flapping",
         "sizzling",
         "(wind blowing)",
         "[BLANK_AUDIO]",
@@ -115,7 +115,7 @@ fn a_spoken_word_starts_the_run_and_lifts_the_bird() {
     tick(&mut app, 5);
     assert_eq!(app.world().resource::<Game>().stage(), Stage::Ready);
     let waiting = bird_at(&mut app).y;
-    say(&mut app, " Fly!");
+    say(&mut app, " Flap!");
     tick(&mut app, 6);
     assert_eq!(app.world().resource::<Game>().stage(), Stage::Play);
     assert!(
@@ -130,7 +130,7 @@ fn a_spoken_word_starts_the_run_and_lifts_the_bird() {
 fn a_bird_that_never_flaps_falls_to_the_ground_and_ends_the_run() {
     let mut app = app();
     tick(&mut app, 5);
-    say(&mut app, "fly");
+    say(&mut app, "flap");
     tick(&mut app, 1);
     assert_eq!(app.world().resource::<Game>().stage(), Stage::Play);
     tick(&mut app, 200);
@@ -148,7 +148,7 @@ fn a_bird_that_never_flaps_falls_to_the_ground_and_ends_the_run() {
 fn a_bird_that_flaps_through_every_gap_scores() {
     let mut app = app();
     tick(&mut app, 5);
-    say(&mut app, "fly");
+    say(&mut app, "flap");
     tick(&mut app, 1);
     flap_through(&mut app, 300);
     let game = app.world().resource::<Game>();
@@ -164,10 +164,10 @@ fn a_bird_that_flaps_through_every_gap_scores() {
 fn a_word_after_the_fall_opens_a_run_of_no_score() {
     let mut app = app();
     tick(&mut app, 5);
-    say(&mut app, "fly");
+    say(&mut app, "flap");
     tick(&mut app, 200);
     assert_eq!(app.world().resource::<Game>().stage(), Stage::Over);
-    say(&mut app, "fly");
+    say(&mut app, "flap");
     tick(&mut app, 1);
     let game = app.world().resource::<Game>();
     assert_eq!(game.stage(), Stage::Play);

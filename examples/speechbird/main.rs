@@ -1,17 +1,29 @@
 mod bird;
+mod column;
+mod digit;
+mod drift;
+mod effect;
 mod flap;
 mod game;
-mod hud;
+mod ground;
 mod loading;
 mod mel;
 mod microphone;
 mod model;
 mod pipe;
+mod plume;
+mod random;
 mod resample;
+mod ridge;
+mod score;
+mod shape;
+mod sky;
 mod source;
 mod speech;
 mod tokenizer;
 mod utterance;
+mod view;
+mod voice;
 mod world;
 
 use bevy::prelude::*;
@@ -33,7 +45,7 @@ fn main() {
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
-                    title: "voice flappy bird - bevy-neura".to_string(),
+                    title: "voice flappy bird - say flap - bevy-neura".to_string(),
                     resolution: (720u32, 700u32).into(),
                     ..default()
                 }),
@@ -51,23 +63,54 @@ fn main() {
         .init_state::<Phase>()
         .init_resource::<game::Game>()
         .add_message::<utterance::Utterance>()
-        .add_systems(Startup, (world::setup, bird::setup, hud::setup))
-        .add_systems(OnEnter(Phase::Loading), loading::setup)
-        .add_systems(OnExit(Phase::Loading), loading::clear)
+        .add_message::<game::Wingbeat>()
         .add_systems(
-            Update,
-            (loading::drive, loading::paint)
-                .chain()
-                .run_if(in_state(Phase::Loading)),
+            Startup,
+            (
+                view::setup,
+                sky::setup,
+                ridge::setup,
+                ground::setup,
+                column::setup,
+                bird::spawn,
+                plume::dress,
+                effect::setup,
+            )
+                .chain(),
         )
         .add_systems(
             Update,
             (
-                speech::listen,
-                speech::decode,
-                game::direct,
-                game::advance,
-                hud::paint,
+                drift::sweep,
+                sky::twinkle,
+                digit::paint,
+                effect::shake,
+                column::dress,
+            ),
+        )
+        .add_systems(OnEnter(Phase::Loading), loading::setup)
+        .add_systems(OnExit(Phase::Loading), loading::clear)
+        .add_systems(
+            Update,
+            (loading::drive, loading::paint, loading::breathe)
+                .chain()
+                .run_if(in_state(Phase::Loading)),
+        )
+        .add_systems(OnEnter(Phase::Playing), (score::setup, voice::setup))
+        .add_systems(
+            Update,
+            (
+                (speech::listen, speech::decode, game::direct, game::advance).chain(),
+                (
+                    plume::animate,
+                    effect::beat,
+                    effect::watch,
+                    effect::invite,
+                    effect::advance,
+                    score::paint,
+                    voice::paint,
+                )
+                    .chain(),
             )
                 .chain()
                 .run_if(in_state(Phase::Playing)),

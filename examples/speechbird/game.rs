@@ -8,6 +8,9 @@ use bevy::prelude::*;
 const ENTROPY: u32 = 0x9E37_79B9;
 const STEP: f32 = 0.05;
 
+#[derive(Message)]
+pub struct Wingbeat;
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Stage {
     Ready,
@@ -95,6 +98,7 @@ pub fn direct(mut utterances: MessageReader<Utterance>, mut game: ResMut<Game>) 
 pub fn advance(
     time: Res<Time>,
     mut commands: Commands,
+    mut beats: MessageWriter<Wingbeat>,
     mut game: ResMut<Game>,
     mut birds: Query<(&mut Bird, &mut Transform), Without<Pipe>>,
     mut pipes: Query<(Entity, &mut Transform, &mut Pipe), Without<Bird>>,
@@ -103,10 +107,12 @@ pub fn advance(
     let Ok((mut bird, mut place)) = birds.single_mut() else {
         return;
     };
+    let mut flapped = false;
     match game.stage {
         Stage::Ready => {
             if game.requested {
                 launch(&mut game, &mut bird, &mut place);
+                flapped = true;
             } else {
                 bird.hover(time.elapsed_secs(), &mut place);
             }
@@ -114,6 +120,7 @@ pub fn advance(
         Stage::Play => {
             if game.requested {
                 bird.flap();
+                flapped = true;
             }
             if bird.fall(dt, &mut place) {
                 game.lose();
@@ -137,8 +144,12 @@ pub fn advance(
                     commands.entity(entity).despawn();
                 }
                 launch(&mut game, &mut bird, &mut place);
+                flapped = true;
             }
         }
+    }
+    if flapped {
+        beats.write(Wingbeat);
     }
     game.requested = false;
     bird.tilt(&mut place);

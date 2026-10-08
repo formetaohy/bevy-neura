@@ -14,6 +14,8 @@ const START: f32 = 0.01;
 const STOP: f32 = 0.006;
 const QUIET: f32 = 0.35;
 const LONGEST: f32 = 5.0;
+const ATTACK: f32 = 0.03;
+const RELEASE: f32 = 0.40;
 
 pub struct Checkpoint {
     pub dims: Dims,
@@ -52,7 +54,8 @@ pub struct Speech {
     microphone: Microphone,
     resampler: Resampler,
     dims: Dims,
-    listening: Listening,
+    state: State,
+    level: f32,
     utterance: Vec<f32>,
     quiet: f32,
     prefix: Vec<u32>,
@@ -60,12 +63,12 @@ pub struct Speech {
     cursor: u32,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum Listening {
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum State {
     Idle,
     Recording,
-    Detecting,
-    Decoding,
+    Reading,
+    Transcribing,
 }
 
 impl Speech {
@@ -92,7 +95,8 @@ impl Speech {
             decoder,
             microphone,
             dims: checkpoint.dims,
-            listening: Listening::Idle,
+            state: State::Idle,
+            level: 0.0,
             utterance: Vec::new(),
             quiet: 0.0,
             prefix,
@@ -101,24 +105,24 @@ impl Speech {
         }
     }
 
-    pub fn state(&self) -> &'static str {
-        match self.listening {
-            Listening::Idle => "waiting",
-            Listening::Recording => "listening",
-            Listening::Detecting => "reading",
-            Listening::Decoding => "transcribing",
-        }
+    pub fn state(&self) -> State {
+        self.state
     }
 
-    pub fn busy(&self) -> bool {
-        !matches!(self.listening, Listening::Idle)
+    pub fn level(&self) -> f32 {
+        self.level
     }
 
     fn begin(&mut self, block: &[f32]) {
         self.utterance.clear();
         self.utterance.extend_from_slice(block);
         self.quiet = 0.0;
-        self.listening = Listening::Recording;
+        self.state = State::Recording;
+    }
+
+    fn track(&mut self, seconds: f32, energy: f32) {
+        let reach = if energy > self.level { ATTACK } else { RELEASE };
+        self.level += (energy - self.level) * (1.0 - (-seconds / reach).exp());
     }
 
     fn capture(&mut self, block: &[f32]) {
@@ -147,7 +151,7 @@ impl Speech {
         self.prefix[0] = tokenizer::SOT;
         self.issued.clear();
         self.cursor = 0;
-        self.listening = Listening::Detecting;
+        self.state = State::Reading;
         println!("{seconds:.1} s of speech, the encoder reads it in {encoded:.2} s");
     }
 
@@ -158,8 +162,8 @@ impl Speech {
             .map(|token| *token as f32)
             .collect::<Vec<f32>>();
         let (token, _) = self.decoder.step(runtime, slots, self.cursor);
-        match self.listening {
-            Listening::Detecting => {
+        match self.state {
+            State::Reading => {
                 let logits = self.decoder.logits(runtime);
                 let language = self
                     .vocabulary
@@ -174,10 +178,10 @@ impl Speech {
                 self.prefix[2] = tokenizer::TRANSCRIBE;
                 self.prefix[3] = tokenizer::NO_TIMESTAMPS;
                 self.cursor = 3;
-                self.listening = Listening::Decoding;
+                self.state = State::Transcribing;
                 None
             }
-            Listening::Decoding => {
+            State::Transcribing => {
                 if token == tokenizer::EOT || token > tokenizer::NO_TIMESTAMPS {
                     return Some(self.stop());
                 }
@@ -195,31 +199,33 @@ impl Speech {
 
     fn stop(&mut self) -> Utterance {
         let text = self.vocabulary.text(&self.issued).trim().to_string();
-        self.listening = Listening::Idle;
+        self.state = State::Idle;
         println!("heard: {text:?}");
         Utterance { text }
     }
 }
 
 pub fn listen(time: Res<Time>, runtime: Res<NeuraRuntime>, mut speech: ResMut<Speech>) {
+    let seconds = time.delta_secs();
     let block = speech.microphone.drain();
+    let energy = if block.is_empty() { 0.0 } else { rms(&block) };
+    speech.track(seconds, energy);
     if block.is_empty() {
-        if matches!(speech.listening, Listening::Recording) {
-            speech.elapse(time.delta_secs(), false);
+        if speech.state == State::Recording {
+            speech.elapse(seconds, false);
             if speech.settled() {
                 speech.finish(&runtime);
             }
         }
         return;
     }
-    let energy = rms(&block);
-    match speech.listening {
-        Listening::Idle => {
+    match speech.state {
+        State::Idle => {
             if energy >= START {
                 speech.begin(&block);
             }
         }
-        Listening::Recording => {
+        State::Recording => {
             let seconds = block.len() as f32 / speech.microphone.rate() as f32;
             speech.capture(&block);
             speech.elapse(seconds, energy >= STOP);
@@ -227,7 +233,7 @@ pub fn listen(time: Res<Time>, runtime: Res<NeuraRuntime>, mut speech: ResMut<Sp
                 speech.finish(&runtime);
             }
         }
-        Listening::Detecting | Listening::Decoding => {}
+        State::Reading | State::Transcribing => {}
     }
 }
 

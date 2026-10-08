@@ -4,13 +4,13 @@ use neura::{MemoryRequest, RuntimeRequest};
 use safetensors::SafeTensors;
 use std::path::{Path, PathBuf};
 
-#[path = "../examples/speech/mel.rs"]
+#[path = "../examples/speechbird/mel.rs"]
 mod mel;
-#[path = "../examples/speech/model/mod.rs"]
+#[path = "../examples/speechbird/model/mod.rs"]
 mod model;
-#[path = "../examples/speech/resample.rs"]
+#[path = "../examples/speechbird/resample.rs"]
 mod resample;
-#[path = "../examples/speech/tokenizer.rs"]
+#[path = "../examples/speechbird/tokenizer.rs"]
 mod tokenizer;
 
 use mel::Mel;

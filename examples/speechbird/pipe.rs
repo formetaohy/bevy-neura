@@ -11,7 +11,6 @@ pub const HIGH: f32 = world::CEILING - GAP / 2.0 - MARGIN;
 pub const SPAWN: f32 = world::WIDTH / 2.0 + WIDTH / 2.0;
 
 const MARGIN: f32 = 60.0;
-const PIPE: Color = Color::srgb(0.28, 0.6, 0.42);
 
 #[derive(Component)]
 #[require(Visibility)]
@@ -46,18 +45,5 @@ impl Pipe {
 }
 
 pub fn spawn(commands: &mut Commands, gap: f32) {
-    let lower = gap - GAP / 2.0 - world::FLOOR;
-    let upper = world::CEILING - gap - GAP / 2.0;
-    commands
-        .spawn((Pipe::at(gap), Transform::from_xyz(SPAWN, 0.0, 1.0)))
-        .with_children(|pipes| {
-            pipes.spawn((
-                Sprite::from_color(PIPE, Vec2::new(WIDTH, lower)),
-                Transform::from_xyz(0.0, world::FLOOR + lower / 2.0, 0.0),
-            ));
-            pipes.spawn((
-                Sprite::from_color(PIPE, Vec2::new(WIDTH, upper)),
-                Transform::from_xyz(0.0, world::CEILING - upper / 2.0, 0.0),
-            ));
-        });
+    commands.spawn((Pipe::at(gap), Transform::from_xyz(SPAWN, 0.0, 0.0)));
 }

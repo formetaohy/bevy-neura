@@ -10,9 +10,6 @@ const LIFT: f32 = 180.0;
 const FALL: f32 = 220.0;
 const BOB_RATE: f32 = 5.0;
 const BOB_SIZE: f32 = 9.0;
-const BODY: Color = Color::srgb(0.98, 0.82, 0.25);
-const BEAK: Color = Color::srgb(0.95, 0.55, 0.2);
-const EYE: Color = Color::srgb(0.06, 0.08, 0.12);
 
 #[derive(Component)]
 pub struct Bird {
@@ -55,32 +52,10 @@ impl Bird {
     }
 }
 
-pub fn setup(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-) {
-    commands
-        .spawn((
-            Bird::new(),
-            Mesh2d(meshes.add(Circle::new(RADIUS))),
-            MeshMaterial2d(materials.add(ColorMaterial::from(BODY))),
-            Transform::from_xyz(START_X, START_Y, 2.0),
-        ))
-        .with_children(|bird| {
-            bird.spawn((
-                Mesh2d(meshes.add(Triangle2d::new(
-                    Vec2::new(4.0, 7.0),
-                    Vec2::new(4.0, -7.0),
-                    Vec2::new(19.0, 0.0),
-                ))),
-                MeshMaterial2d(materials.add(ColorMaterial::from(BEAK))),
-                Transform::from_xyz(0.0, 0.0, 0.1),
-            ));
-            bird.spawn((
-                Mesh2d(meshes.add(Circle::new(4.0))),
-                MeshMaterial2d(materials.add(ColorMaterial::from(EYE))),
-                Transform::from_xyz(4.0, 6.0, 0.2),
-            ));
-        });
+pub fn spawn(mut commands: Commands) {
+    commands.spawn((
+        Bird::new(),
+        Visibility::Inherited,
+        Transform::from_xyz(START_X, START_Y, 0.0),
+    ));
 }

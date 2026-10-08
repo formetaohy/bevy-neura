@@ -11,7 +11,7 @@ impl Flap {
     }
 }
 
-const KEYWORDS: [&str; 3] = ["fly", "飞", "飛"];
+const KEYWORDS: [&str; 3] = ["flap", "飞", "飛"];
 
 fn words(text: &str) -> String {
     let mut spaced = String::with_capacity(text.len() * 3);
