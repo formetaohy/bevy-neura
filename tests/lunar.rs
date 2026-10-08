@@ -4,8 +4,6 @@ mod body;
 mod contact;
 #[path = "../examples/lunar/env.rs"]
 mod env;
-#[path = "../examples/lunar/heuristic.rs"]
-mod heuristic;
 #[path = "../examples/lunar/learner.rs"]
 mod learner;
 #[path = "../examples/lunar/net.rs"]
@@ -31,18 +29,26 @@ use bevy::prelude::*;
 use bevy_neura::{NeuraPlugin, NeuraRuntime};
 use body::{Body, Part};
 use env::{Action, Ending, Lander, OBSERVATION, STEP};
-use heuristic::pilot;
 use shape::Polygon;
 use terrain::Terrain;
 use world::{GRAVITY, World};
 
-const EPISODES: u64 = 24;
+const SCRIPT: [Action; 8] = [
+    Action::Coast,
+    Action::Main,
+    Action::Coast,
+    Action::Main,
+    Action::Left,
+    Action::Coast,
+    Action::Right,
+    Action::Main,
+];
 
 struct Played {
     reward: f32,
+    expected: f32,
     steps: u32,
     ending: Option<Ending>,
-    fuelled: (u32, u32),
     first: [f32; OBSERVATION],
     last: [f32; OBSERVATION],
 }
@@ -50,24 +56,33 @@ struct Played {
 fn play(seed: u64) -> Played {
     let mut lander = Lander::new(seed, false);
     let first = lander.observation();
-    let (mut reward, mut steps, mut fuelled) = (0.0, 0, (0u32, 0u32));
+    let (mut reward, mut expected, mut steps) = (0.0, 0.0, 0);
+    let mut carried = shaping_of(&first);
     loop {
-        let action = pilot(&lander.observation());
-        if action == Action::Main {
-            fuelled.0 += 1;
-        }
-        if matches!(action, Action::Left | Action::Right) {
-            fuelled.1 += 1;
-        }
+        let action = SCRIPT[steps as usize % SCRIPT.len()];
         let moved = lander.step(action);
+        let reached = shaping_of(&moved.observation);
+        let fuel = match action {
+            Action::Main => 0.30,
+            Action::Left | Action::Right => 0.03,
+            Action::Coast => 0.0,
+        };
+        expected += match moved.terminated {
+            true => match lander.ending() {
+                Some(Ending::Landed) => 100.0,
+                _ => -100.0,
+            },
+            false => reached - carried - fuel,
+        };
+        carried = reached;
         reward += moved.reward;
         steps += 1;
         if moved.terminated || moved.truncated {
             return Played {
                 reward,
+                expected,
                 steps,
                 ending: lander.ending(),
-                fuelled,
                 first,
                 last: moved.observation,
             };
@@ -75,7 +90,7 @@ fn play(seed: u64) -> Played {
     }
 }
 
-fn shaping(state: &[f32; OBSERVATION]) -> f32 {
+fn shaping_of(state: &[f32; OBSERVATION]) -> f32 {
     -100.0 * (state[0] * state[0] + state[1] * state[1]).sqrt()
         - 100.0 * (state[2] * state[2] + state[3] * state[3]).sqrt()
         - 100.0 * state[4].abs()
@@ -84,46 +99,15 @@ fn shaping(state: &[f32; OBSERVATION]) -> f32 {
 }
 
 #[test]
-fn the_pilot_of_the_moon_lands_on_the_pad() {
-    let mut landed = 0;
-    let mut score = 0.0;
-    for seed in 0..EPISODES {
-        let played = play(seed);
-        score += played.reward;
-        if played.ending == Some(Ending::Landed) {
-            landed += 1;
-        }
-    }
-    let mean = score / EPISODES as f32;
-    assert!(
-        landed * 4 >= EPISODES as i32 * 3,
-        "the pilot lands {landed} of {EPISODES} episodes",
-    );
-    assert!(
-        mean > 120.0,
-        "the pilot scores {mean} where a landing of the moon reads above 120",
-    );
-}
-
-#[test]
-fn the_reward_of_an_episode_telescopes_its_shaping_and_its_fuel() {
+fn every_step_of_an_episode_scores_its_shaping_its_fuel_or_its_end() {
     for seed in [0, 5, 11] {
         let played = play(seed);
-        let expected = shaping(&played.last)
-            - shaping(&played.first)
-            - 0.30 * played.fuelled.0 as f32
-            - 0.03 * played.fuelled.1 as f32
-            + match played.ending {
-                Some(Ending::Landed) => 100.0,
-                Some(_) => -100.0,
-                None => 0.0,
-            };
         assert!(
-            (played.reward - expected).abs() < 0.5,
-            "the episode of seed {seed} scores {} where its shaping and fuel read {expected}",
+            (played.reward - played.expected).abs() < 0.05,
+            "the episode of seed {seed} scores {} where its shaping, fuel and end read {}",
             played.reward,
+            played.expected,
         );
-        assert!(played.steps < 1000, "the pilot of seed {seed} never lands");
     }
 }
 
@@ -183,16 +167,18 @@ fn the_engines_of_the_lander_steer_it_sideways() {
 }
 
 #[test]
-fn the_observation_of_a_episode_stays_within_the_space_of_the_lander() {
+fn the_observation_of_a_flight_stays_within_the_space_of_the_lander() {
     let mut lander = Lander::new(2, false);
+    let mut step = 0;
     loop {
-        let moved = lander.step(pilot(&lander.observation()));
+        let moved = lander.step(SCRIPT[step as usize % SCRIPT.len()]);
         for (index, value) in moved.observation.iter().enumerate() {
             assert!(
                 value.is_finite() && (index >= 5 || value.abs() < 2.5),
-                "the observation {index} of a landed episode reads {value}",
+                "the observation {index} of a flight reads {value}",
             );
         }
+        step += 1;
         if moved.terminated || moved.truncated {
             break;
         }
@@ -205,7 +191,9 @@ fn the_same_seed_plays_the_same_episode() {
     let second = play(3);
     assert_eq!(first.steps, second.steps);
     assert_eq!(first.reward, second.reward);
+    assert_eq!(first.ending, second.ending);
     assert_eq!(first.first, second.first);
+    assert_eq!(first.last, second.last);
 }
 
 #[test]
@@ -326,12 +314,12 @@ fn the_training_lifts_the_policy_of_the_lander() {
     app.update();
     let runtime = app.world().resource::<NeuraRuntime>().clone();
     app.world_mut().resource_mut::<train::Training>().steps = train::TURBO;
-    while app.world().resource::<train::Training>().samples < 150_000 {
+    while app.world().resource::<train::Training>().samples < 300_000 {
         app.update();
     }
     let training = app.world().resource::<train::Training>();
     assert!(
-        training.best > 0.0,
+        training.best > 150.0,
         "{} samples of training never land the lander, best {}",
         training.samples,
         training.best,

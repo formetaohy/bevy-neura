@@ -5,7 +5,6 @@ mod display;
 mod env;
 mod exhaust;
 mod ground;
-mod heuristic;
 mod hud;
 mod learner;
 mod net;
@@ -114,9 +113,6 @@ fn keys(
     }
     if keyboard.just_pressed(KeyCode::KeyP) {
         training.steps = if training.steps == 0 { train::SLOW } else { 0 };
-    }
-    if keyboard.just_pressed(KeyCode::KeyH) {
-        display.pilot.flip();
     }
     if keyboard.just_pressed(KeyCode::KeyR) {
         display.replay();

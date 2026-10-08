@@ -1,5 +1,4 @@
 use crate::env::{Ending, Lander};
-use crate::heuristic;
 use crate::policy::{ACTIONS, Greedy};
 use crate::train::Training;
 use bevy::prelude::*;
@@ -9,33 +8,10 @@ const SEED: u64 = 0x1u64;
 const HISTORY: usize = 32;
 const BANNER: u32 = 110;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Pilot {
-    Learned,
-    Heuristic,
-}
-
-impl Pilot {
-    pub fn name(self) -> &'static str {
-        match self {
-            Self::Learned => "learned",
-            Self::Heuristic => "pilot",
-        }
-    }
-
-    pub fn flip(&mut self) {
-        *self = match self {
-            Self::Learned => Self::Heuristic,
-            Self::Heuristic => Self::Learned,
-        };
-    }
-}
-
 #[derive(Resource)]
 pub struct Display {
     env: Lander,
     greedy: Greedy,
-    pub pilot: Pilot,
     pub value: f32,
     pub logits: [f32; ACTIONS],
     pub returned: f32,
@@ -51,7 +27,6 @@ impl Display {
         Self {
             env: Lander::new(SEED, true),
             greedy: Greedy::share(runtime, training.model()),
-            pilot: Pilot::Learned,
             value: 0.0,
             logits: [0.0; ACTIONS],
             returned: 0.0,
@@ -86,16 +61,10 @@ impl Display {
 
     pub fn step(&mut self, runtime: &NeuraRuntime) {
         let observation = self.env.observation();
-        let action = match self.pilot {
-            Pilot::Learned => {
-                let guess = self.greedy.choose(runtime, &observation);
-                self.value = guess.value;
-                self.logits = guess.logits;
-                guess.action
-            }
-            Pilot::Heuristic => heuristic::pilot(&observation),
-        };
-        let moved = self.env.step(action);
+        let guess = self.greedy.choose(runtime, &observation);
+        self.value = guess.value;
+        self.logits = guess.logits;
+        let moved = self.env.step(guess.action);
         self.env.fade();
         self.returned += moved.reward;
         if self.ending.is_some() {

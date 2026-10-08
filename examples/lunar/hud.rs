@@ -146,7 +146,7 @@ pub fn setup(mut commands: Commands, runtime: Res<NeuraRuntime>) {
     ));
     commands.spawn((
         Line::Hints,
-        Text::new("space turbo   h pilot   p pause   r replay"),
+        Text::new("space turbo   p pause   r replay"),
         text(15.0, DIM),
         bottom(16.0),
     ));
@@ -217,8 +217,7 @@ pub fn paint(
             ),
             Line::Showcase => (
                 format!(
-                    "showcase ({})\nepisode {:+.1}   value {:+.1}\nmean {:+.1}   best {:+.1}   landed {} times",
-                    display.pilot.name(),
+                    "showcase\nepisode {:+.1}   value {:+.1}\nmean {:+.1}   best {:+.1}   landed {} times",
                     display.returned,
                     display.value,
                     display.mean(),
@@ -242,10 +241,7 @@ pub fn paint(
                 ),
                 INK,
             ),
-            Line::Hints => (
-                "space turbo   h pilot   p pause   r replay".to_string(),
-                DIM,
-            ),
+            Line::Hints => ("space turbo   p pause   r replay".to_string(), DIM),
             Line::Banner => (banner(&display), banner_ink(&display)),
         };
         text.0 = drawn;
