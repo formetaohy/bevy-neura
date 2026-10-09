@@ -13,13 +13,9 @@ const HELD: Color = Color::srgb(0.32, 0.10, 0.13);
 const HELD_CORE: Color = Color::srgb(0.99, 0.32, 0.36);
 const BUSY: Color = Color::srgb(0.10, 0.12, 0.18);
 const BUSY_CORE: Color = Color::srgb(0.99, 0.72, 0.32);
-const DIM: Color = Color::srgb(0.55, 0.62, 0.76);
 
 #[derive(Component)]
 pub(crate) struct Core;
-
-#[derive(Component)]
-pub(crate) struct Status;
 
 type Buttons<'w, 's> = Query<
     'w,
@@ -43,43 +39,33 @@ pub fn setup(mut commands: Commands) {
             left: Val::Px(0.0),
             bottom: Val::Px(40.0),
             width: Val::Percent(100.0),
-            flex_direction: FlexDirection::Column,
-            align_items: AlignItems::Center,
-            row_gap: Val::Px(18.0),
+            justify_content: JustifyContent::Center,
             ..default()
         },
         Pickable::IGNORE,
-        children![
-            (
-                Status,
-                Text::new(prompt(Stage::Idle)),
-                TextFont::from_font_size(17.0),
-                TextColor(DIM),
-            ),
-            (
-                Button,
-                Record,
+        children![(
+            Button,
+            Record,
+            Node {
+                width: Val::Px(SIZE),
+                height: Val::Px(SIZE),
+                border_radius: BorderRadius::MAX,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                ..default()
+            },
+            BackgroundColor(IDLE),
+            children![(
+                Core,
                 Node {
-                    width: Val::Px(SIZE),
-                    height: Val::Px(SIZE),
+                    width: Val::Px(CORE),
+                    height: Val::Px(CORE),
                     border_radius: BorderRadius::MAX,
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
                     ..default()
                 },
-                BackgroundColor(IDLE),
-                children![(
-                    Core,
-                    Node {
-                        width: Val::Px(CORE),
-                        height: Val::Px(CORE),
-                        border_radius: BorderRadius::MAX,
-                        ..default()
-                    },
-                    BackgroundColor(IDLE_CORE),
-                )],
-            ),
-        ],
+                BackgroundColor(IDLE_CORE),
+            )],
+        )],
     ));
 }
 
@@ -89,7 +75,6 @@ pub fn paint(
     mut commands: Commands,
     mut buttons: Buttons,
     mut cores: Cores,
-    mut statuses: Query<&mut Text, With<Status>>,
 ) {
     let stage = speech.stage();
     let level = (speech.level() / LOUD).clamp(0.0, 1.0).sqrt();
@@ -130,20 +115,5 @@ pub fn paint(
             Stage::Recording => HELD_CORE,
             Stage::Reading | Stage::Writing => BUSY_CORE,
         };
-    }
-    for mut text in &mut statuses {
-        let words = prompt(stage);
-        if text.0 != words {
-            text.0 = words.to_string();
-        }
-    }
-}
-
-fn prompt(stage: Stage) -> &'static str {
-    match stage {
-        Stage::Idle => "hold the button and speak",
-        Stage::Recording => "listening",
-        Stage::Reading => "reading the sound",
-        Stage::Writing => "writing the words",
     }
 }

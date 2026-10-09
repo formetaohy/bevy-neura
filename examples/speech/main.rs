@@ -63,6 +63,7 @@ fn main() {
                 speech::capture,
                 speech::decode,
                 transcript::write,
+                transcript::paint,
                 console::paint,
             )
                 .chain()

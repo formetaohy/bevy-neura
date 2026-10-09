@@ -1,3 +1,4 @@
+use crate::speech::{Speech, Stage};
 use crate::utterance::Utterance;
 use bevy::picking::Pickable;
 use bevy::prelude::*;
@@ -6,9 +7,13 @@ use std::collections::VecDeque;
 const SLOTS: usize = 6;
 const SMALL: f32 = 17.0;
 const LARGE: f32 = 33.0;
+const DIM: Color = Color::srgb(0.55, 0.62, 0.76);
 
 #[derive(Component)]
 pub(crate) struct Line(usize);
+
+#[derive(Component)]
+pub(crate) struct Status;
 
 #[derive(Resource, Default)]
 pub(crate) struct History(VecDeque<String>);
@@ -46,6 +51,13 @@ pub fn setup(mut commands: Commands) {
                     TextLayout::justify(Justify::Center),
                 ));
             }
+            screen.spawn((
+                Status,
+                Text::new(prompt(Stage::Idle)),
+                TextFont::from_font_size(SMALL),
+                TextColor(DIM),
+                TextLayout::justify(Justify::Center),
+            ));
         });
     commands.init_resource::<History>();
 }
@@ -81,6 +93,24 @@ pub fn write(
         if text.0 != words {
             text.0 = words;
         }
+    }
+}
+
+pub fn paint(speech: Res<Speech>, mut statuses: Query<&mut Text, With<Status>>) {
+    let words = prompt(speech.stage());
+    for mut text in &mut statuses {
+        if text.0 != words {
+            text.0 = words.to_string();
+        }
+    }
+}
+
+fn prompt(stage: Stage) -> &'static str {
+    match stage {
+        Stage::Idle => "hold the button and speak",
+        Stage::Recording => "listening",
+        Stage::Reading => "reading the sound",
+        Stage::Writing => "writing the words",
     }
 }
 
