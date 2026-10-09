@@ -23,8 +23,6 @@ The window carries the state of the app as text and colour:
   lines fading up the screen, and the last six lines are kept;
 * the circle is the microphone: a small dim core while nothing records, red and growing with the
   level of what it hears while it records, amber and pulsing while the model reads;
-* the line under the words names the step: `hold the button and speak`, `listening`,
-  `reading the sound` or `writing the words`;
 * the button sits alone at the bottom of the window and greys out while a reading runs, taking the
   next hold when the reading is over.
 
