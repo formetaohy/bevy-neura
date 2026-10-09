@@ -246,6 +246,47 @@ fn a_downloaded_model_answers_the_reference() {
 }
 
 #[test]
+fn a_model_knows_silence_from_speech() {
+    let model = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/speech/whisper-tiny");
+    if !model.join("model.safetensors").exists() {
+        eprintln!("a downloaded model is checked when target/speech holds whisper-tiny");
+        return;
+    }
+    let mut cases = vec![(
+        "three seconds of silence",
+        vec![0.0; 3 * mel::SAMPLE_RATE as usize],
+        false,
+    )];
+    if let Some(reference) = std::env::var_os("SPEECH_REFERENCE_DIR").map(PathBuf::from) {
+        cases.push((
+            "the reference speech",
+            read_wave(&reference.join("speech.wav")),
+            true,
+        ));
+    }
+    let app = app(DEVICE_HEAP);
+    let runtime = app.world().resource::<NeuraRuntime>();
+    let dims = Dims::of(&model);
+    let mel = Mel::of(&model, dims.mel_bins);
+    let weights = bytes(model.join("model.safetensors"));
+    let encoder = EncoderModel::load(runtime, &dims, &weights);
+    let decoder = DecoderModel::load(runtime, &dims, &weights);
+    for (what, audio, speech) in cases {
+        encoder.run(runtime, mel.spectrogram(&audio));
+        let cross = encoder.cross(runtime);
+        decoder.carry(runtime, &cross);
+        let mut prefix = vec![0u32; dims.prefix() as usize];
+        prefix[0] = tokenizer::SOT;
+        let prompt = prefix
+            .iter()
+            .map(|token| *token as f32)
+            .collect::<Vec<f32>>();
+        decoder.step(runtime, prompt, 0);
+        assert_eq!(decoder.hears_speech(runtime), speech, "{what}");
+    }
+}
+
+#[test]
 fn a_resampler_carries_the_tones_it_holds_and_leaves_the_tones_it_cannot() {
     let tone = |frequency: f32, rate: u32, seconds: f32| {
         (0..(rate as f32 * seconds) as usize)

@@ -4,6 +4,7 @@ use std::path::Path;
 pub const SOT: u32 = 50258;
 pub const EOT: u32 = 50257;
 pub const TRANSCRIBE: u32 = 50359;
+pub const NO_SPEECH: u32 = 50362;
 pub const NO_TIMESTAMPS: u32 = 50363;
 
 pub struct Vocabulary {

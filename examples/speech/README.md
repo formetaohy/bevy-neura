@@ -11,7 +11,9 @@ cargo run --release --example speech
 ## Controls
 
 * hold the button with the mouse for as long as you speak and let go when you are done;
-* a hold shorter than 0.3 s is dropped, and a hold past 28 s is cut short and read at that cap.
+* a hold shorter than 0.3 s is dropped, and a hold past 28 s is cut short and read at that cap;
+* a hold the model hears no speech in is dropped as well, so the page keeps the words you said and
+  nothing else.
 
 ## What the picture says
 
@@ -25,8 +27,8 @@ The window carries the state of the app as text and colour:
   `reading the sound` or `writing the words`;
 * the button greys out while a reading runs and takes the next hold when the reading is over.
 
-The console carries what the picture cannot: the seconds of speech, the language, the tokens and the
-seconds the encoder took for every utterance.
+The console carries what the picture cannot: the seconds of sound, the language, the tokens and the
+seconds the encoder took for every reading.
 
 ## The first run
 

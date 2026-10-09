@@ -148,7 +148,7 @@ impl Speech {
         let cross = self.encoder.cross(runtime);
         self.decoder.carry(runtime, &cross);
         println!(
-            "{seconds:.1} s of speech, the encoder reads it in {:.2} s",
+            "{seconds:.1} s of sound, the encoder reads it in {:.2} s",
             run.seconds(),
         );
         self.samples.clear();
@@ -172,6 +172,11 @@ impl Speech {
         let (token, _) = self.decoder.step(runtime, slots, self.cursor);
         match self.stage {
             Stage::Reading => {
+                if !self.decoder.hears_speech(runtime) {
+                    println!("the model hears no speech in it");
+                    self.stage = Stage::Idle;
+                    return None;
+                }
                 let logits = self.decoder.logits(runtime);
                 self.language = self
                     .vocabulary

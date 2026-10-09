@@ -8,6 +8,7 @@ use crate::model::decoder::Decoder;
 use crate::model::dims::Dims;
 use crate::model::encoder::Encoder;
 use crate::model::parameters::Parameters;
+use crate::tokenizer;
 use bevy_neura::{Inputs, Model, ModelPlan, NeuraRuntime, Role, Roles};
 use neura::{Element, Run, Shape, Value};
 
@@ -16,6 +17,7 @@ pub const TOKENS: Role = "tokens";
 pub const CURSOR: Role = "cursor";
 pub const TOKEN: Role = "token";
 pub const LOGITS: Role = "logits";
+const SILENT: f32 = 0.6;
 
 pub struct EncoderModel {
     model: Model,
@@ -130,6 +132,20 @@ impl DecoderModel {
 
     pub fn logits(&self, runtime: &NeuraRuntime) -> Vec<f32> {
         self.model.read(runtime, LOGITS)
+    }
+
+    pub fn hears_speech(&self, runtime: &NeuraRuntime) -> bool {
+        self.chance(runtime, tokenizer::NO_SPEECH) < SILENT
+    }
+
+    fn chance(&self, runtime: &NeuraRuntime, token: u32) -> f32 {
+        let logits = self.logits(runtime);
+        let ceiling = logits.iter().copied().fold(f32::MIN, f32::max);
+        let total = logits
+            .iter()
+            .map(|value| (value - ceiling).exp())
+            .sum::<f32>();
+        (logits[token as usize] - ceiling).exp() / total
     }
 
     pub fn step(&self, runtime: &NeuraRuntime, tokens: Vec<f32>, cursor: u32) -> (u32, Run) {
