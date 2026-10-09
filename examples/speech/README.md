@@ -19,6 +19,7 @@ cargo run --release --example speech
 
 The window carries the state of the app as text and colour:
 
+* the hint `hold the button and speak` holds the screen until the first words land;
 * the words land above the button, the newest line in the largest and brightest type, the older
   lines fading up the screen, and the last six lines are kept;
 * the circle is the microphone: a small dim core while nothing records, red and growing with the

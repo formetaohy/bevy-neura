@@ -6,9 +6,14 @@ use std::collections::VecDeque;
 const SLOTS: usize = 6;
 const SMALL: f32 = 17.0;
 const LARGE: f32 = 33.0;
+const HINT: &str = "hold the button and speak";
+const DIM: Color = Color::srgb(0.55, 0.62, 0.76);
 
 #[derive(Component)]
 pub(crate) struct Line(usize);
+
+#[derive(Component)]
+pub(crate) struct Hint;
 
 #[derive(Resource, Default)]
 pub(crate) struct History(VecDeque<String>);
@@ -46,6 +51,13 @@ pub fn setup(mut commands: Commands) {
                     TextLayout::justify(Justify::Center),
                 ));
             }
+            screen.spawn((
+                Hint,
+                Text::new(HINT),
+                TextFont::from_font_size(SMALL),
+                TextColor(DIM),
+                TextLayout::justify(Justify::Center),
+            ));
         });
     commands.init_resource::<History>();
 }
@@ -54,6 +66,7 @@ pub fn write(
     mut utterances: MessageReader<Utterance>,
     mut history: ResMut<History>,
     mut lines: Query<(&Line, &mut Text)>,
+    mut hints: Query<&mut Text, (With<Hint>, Without<Line>)>,
 ) {
     let mut landed = false;
     for utterance in utterances.read() {
@@ -69,6 +82,9 @@ pub fn write(
     }
     if !landed {
         return;
+    }
+    for mut text in &mut hints {
+        text.0.clear();
     }
     let count = history.0.len() as isize;
     for (line, mut text) in &mut lines {
