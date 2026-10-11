@@ -1,6 +1,6 @@
-<h1 align="center">
-  <strong>bevy-neura</strong>
-</h1>
+<p align="center">
+  <img src="docs/assets/neura-readme-banner-animated.svg" width="784" alt="Neura">
+</p>
 
 <p align="center">
   <strong>Build AI-native games in Bevy</strong>
