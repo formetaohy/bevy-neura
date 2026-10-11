@@ -304,12 +304,18 @@ fn a_drawn_action_of_the_policy_matches_the_logarithm_it_reports() {
     );
 }
 
+fn build(runtime: Res<NeuraRuntime>, mut commands: Commands) {
+    let learner = learner::Learner::attach(&runtime);
+    let sampler = policy::Sampler::share(&runtime, learner.model(), rollout::ENVS);
+    commands.insert_resource(train::Training::of(learner, sampler));
+}
+
 #[test]
 fn the_training_lifts_the_policy_of_the_lander() {
     let mut app = App::new();
     app.add_plugins(NeuraPlugin::default())
         .init_resource::<Time>()
-        .add_systems(Startup, train::build)
+        .add_systems(Startup, build)
         .add_systems(Update, train::advance);
     app.update();
     let runtime = app.world().resource::<NeuraRuntime>().clone();

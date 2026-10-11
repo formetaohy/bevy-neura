@@ -1,3 +1,6 @@
+#[path = "../common/mod.rs"]
+mod common;
+
 mod console;
 mod loading;
 mod mel;
@@ -44,18 +47,13 @@ fn main() {
                 },
                 ..RuntimeRequest::default()
             }),
+            common::LoadingPlugin::new(Phase::Loading, source::MODEL),
         ))
         .init_state::<Phase>()
         .add_message::<utterance::Utterance>()
         .add_systems(Startup, view::setup)
         .add_systems(OnEnter(Phase::Loading), loading::setup)
-        .add_systems(OnExit(Phase::Loading), loading::clear)
-        .add_systems(
-            Update,
-            (loading::drive, loading::paint)
-                .chain()
-                .run_if(in_state(Phase::Loading)),
-        )
+        .add_systems(Update, loading::drive.run_if(in_state(Phase::Loading)))
         .add_systems(OnEnter(Phase::Ready), (transcript::setup, console::setup))
         .add_systems(
             Update,

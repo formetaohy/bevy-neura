@@ -88,10 +88,6 @@ impl Display {
     }
 }
 
-pub fn build(runtime: Res<NeuraRuntime>, training: Res<Training>, mut commands: Commands) {
-    commands.insert_resource(Display::build(&runtime, &training));
-}
-
 pub fn advance(runtime: Res<NeuraRuntime>, mut display: ResMut<Display>) {
     display.step(&runtime);
 }

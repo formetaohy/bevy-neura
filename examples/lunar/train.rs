@@ -37,9 +37,7 @@ pub struct Training {
 }
 
 impl Training {
-    pub fn build(runtime: &NeuraRuntime) -> Self {
-        let learner = Learner::attach(runtime);
-        let sampler = Sampler::share(runtime, learner.model(), ENVS);
+    pub fn of(learner: Learner, sampler: Sampler) -> Self {
         let mut random = Random::seeded(SEED);
         let envs = (0..ENVS)
             .map(|_| Lander::new(random.bits() as u64, false))
@@ -183,10 +181,6 @@ fn explained(values: &[f32], targets: &[f32]) -> f32 {
         return 0.0;
     }
     1.0 - error / variance
-}
-
-pub fn build(runtime: Res<NeuraRuntime>, mut commands: Commands) {
-    commands.insert_resource(Training::build(&runtime));
 }
 
 pub fn advance(time: Res<Time>, runtime: Res<NeuraRuntime>, mut training: ResMut<Training>) {

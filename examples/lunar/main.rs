@@ -1,3 +1,6 @@
+#[path = "../common/mod.rs"]
+mod common;
+
 mod body;
 mod contact;
 mod craft;
@@ -7,6 +10,7 @@ mod exhaust;
 mod ground;
 mod hud;
 mod learner;
+mod loading;
 mod net;
 mod particles;
 mod policy;
@@ -27,6 +31,13 @@ const DEVICE_HEAP: u64 = 1 << 28;
 const READBACK: u64 = 1 << 22;
 const WINDOW: (u32, u32) = (1000, 680);
 
+#[derive(States, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+enum Phase {
+    #[default]
+    Loading,
+    Ready,
+}
+
 fn main() {
     App::new()
         .add_plugins((
@@ -46,23 +57,21 @@ fn main() {
                 },
                 ..RuntimeRequest::default()
             }),
+            common::LoadingPlugin::new(Phase::Loading, "lunar lander - PPO on bevy-neura"),
         ))
+        .init_state::<Phase>()
         .insert_resource(ClearColor(Color::srgb(0.01, 0.012, 0.03)))
+        .add_systems(Startup, camera)
+        .add_systems(OnEnter(Phase::Loading), loading::setup)
+        .add_systems(Update, loading::drive.run_if(in_state(Phase::Loading)))
         .add_systems(
-            Startup,
+            OnEnter(Phase::Ready),
             (
-                camera,
-                train::build,
-                display::build.after(train::build),
-                (
-                    sky::setup,
-                    ground::setup,
-                    craft::setup,
-                    exhaust::setup,
-                    hud::setup,
-                )
-                    .chain()
-                    .after(display::build),
+                sky::setup,
+                ground::setup,
+                craft::setup,
+                exhaust::setup,
+                hud::setup,
             )
                 .chain(),
         )
@@ -79,7 +88,8 @@ fn main() {
                 ground::pulse,
                 hud::paint,
             )
-                .chain(),
+                .chain()
+                .run_if(in_state(Phase::Ready)),
         )
         .run();
 }
