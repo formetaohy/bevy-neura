@@ -77,7 +77,7 @@ impl Model {
         }
     }
 
-    pub fn value(&self, role: Role) -> Value<'static> {
+    pub fn value(&self, role: Role) -> Value {
         self.roles.value(role)
     }
 

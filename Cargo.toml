@@ -2,7 +2,7 @@
 resolver = "3"
 
 [workspace.package]
-version = "0.6.0"
+version = "0.7.0"
 edition = "2024"
 description = "Neura integration for Bevy"
 license = "MIT"
@@ -24,9 +24,10 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-bevy = { version = "0.19.1", default-features = false, features = ["std", "multi_threaded"] }
-neura = "0.6.0"
-neura-abi = "0.6.0"
+bevy = { version = "0.19.1", default-features = false, features = ["std", "multi_threaded", "bevy_render"] }
+neura = "0.7.0"
+neura-abi = "0.7.0"
+wgpu = { version = "29", default-features = false, features = ["std", "dx12", "metal", "vulkan"] }
 
 [lints]
 workspace = true

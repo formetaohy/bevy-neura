@@ -1,6 +1,8 @@
 mod extents;
 mod geometry;
+mod host;
 mod inputs;
+mod memory;
 mod model;
 mod plan;
 mod plugin;
@@ -11,6 +13,7 @@ mod runtime;
 pub use extents::Extents;
 pub use geometry::ModelGeometry;
 pub use inputs::Inputs;
+pub use memory::NeuraMemory;
 pub use model::Model;
 pub use plan::ModelPlan;
 pub use plugin::NeuraPlugin;

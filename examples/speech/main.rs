@@ -15,8 +15,9 @@ mod utterance;
 mod view;
 
 use bevy::prelude::*;
-use bevy_neura::NeuraPlugin;
-use neura::{MemoryRequest, RuntimeRequest};
+use bevy::render::pipelined_rendering::PipelinedRenderingPlugin;
+use bevy_neura::{NeuraMemory, NeuraPlugin};
+use neura::MemoryRequest;
 
 const DEVICE_HEAP: u64 = 1 << 30;
 const READBACK: u64 = 1 << 23;
@@ -31,24 +32,26 @@ enum Phase {
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "speech - hold the button and talk - bevy-neura".to_string(),
-                    resolution: (660u32, 720u32).into(),
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "speech - hold the button and talk - bevy-neura".to_string(),
+                        resolution: (660u32, 720u32).into(),
+                        ..default()
+                    }),
                     ..default()
-                }),
-                ..default()
-            }),
-            NeuraPlugin::new(RuntimeRequest {
-                memory: MemoryRequest {
-                    heap_bytes: DEVICE_HEAP,
-                    readback_bytes: READBACK,
-                    readback_slots: 4,
-                },
-                ..RuntimeRequest::default()
-            }),
+                })
+                .build()
+                .disable::<PipelinedRenderingPlugin>(),
+            NeuraPlugin,
             common::LoadingPlugin::new(Phase::Loading, source::MODEL),
         ))
+        .insert_resource(NeuraMemory(MemoryRequest {
+            heap_bytes: DEVICE_HEAP,
+            readback_bytes: READBACK,
+            readback_slots: 4,
+            ..MemoryRequest::default()
+        }))
         .init_state::<Phase>()
         .add_message::<utterance::Utterance>()
         .add_systems(Startup, view::setup)

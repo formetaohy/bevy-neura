@@ -1,12 +1,8 @@
-use bevy::prelude::*;
-use bevy_neura::{Extents, Inputs, Model, ModelPlan, NeuraPlugin, NeuraRuntime, Roles};
-use neura::{Element, Init, Linear, MemoryRequest, RuntimeRequest, Shape};
+mod common;
 
-fn app() -> App {
-    let mut app = App::new();
-    app.add_plugins(NeuraPlugin::default());
-    app
-}
+use bevy::prelude::*;
+use bevy_neura::{Extents, Inputs, Model, ModelPlan, NeuraRuntime, Roles};
+use neura::{Element, Init, Linear, MemoryRequest, Shape};
 
 fn affine() -> ModelPlan {
     ModelPlan::build(|graph| {
@@ -35,7 +31,8 @@ fn run_affine(runtime: &NeuraRuntime, model: &Model, batch: u32, data: Vec<f32>)
 
 #[test]
 fn a_run_follows_the_live_extent() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let model = affine().attach(runtime);
     for batch in [8u32, 3, 1] {
@@ -51,7 +48,8 @@ fn a_run_follows_the_live_extent() {
 
 #[test]
 fn a_live_extent_of_zero_runs() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let model = affine().attach(runtime);
     assert!(run_affine(runtime, &model, 0, Vec::new()).is_empty());
@@ -59,7 +57,8 @@ fn a_live_extent_of_zero_runs() {
 
 #[test]
 fn two_extents_bind_by_their_roles() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let model = ModelPlan::build(|graph| {
         let rows = graph.free(3);
@@ -83,7 +82,8 @@ fn two_extents_bind_by_their_roles() {
 
 #[test]
 fn every_output_answers_the_last_run() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let model = ModelPlan::build(|graph| {
         let observation = graph.input(Shape::matrix(2, 2), Element::Single);
@@ -110,7 +110,8 @@ fn every_output_answers_the_last_run() {
 
 #[test]
 fn a_pull_of_every_model_collects_afterwards() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let models = [affine().attach(runtime), affine().attach(runtime)];
     let mut pending = Vec::new();
@@ -132,7 +133,8 @@ fn a_pull_of_every_model_collects_afterwards() {
 
 #[test]
 fn a_value_of_a_role_serves_the_raw_runtime() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let model = affine().attach(runtime);
     model.bind(runtime, &Extents::new().axis("batch", 1));
@@ -146,7 +148,8 @@ fn a_value_of_a_role_serves_the_raw_runtime() {
 
 #[test]
 fn the_geometry_of_a_model_names_its_bounds() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let model = affine().attach(runtime);
     let geometry = model.geometry();
@@ -162,7 +165,8 @@ fn the_geometry_of_a_model_names_its_bounds() {
 
 #[test]
 fn a_tuned_model_runs_the_values_it_compiled() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let model = ModelPlan::build(|graph| {
         let observation = graph.input(Shape::matrix(2, 2), Element::Single);
@@ -181,20 +185,18 @@ fn a_tuned_model_runs_the_values_it_compiled() {
 
 #[test]
 fn a_dropped_model_returns_its_storage_to_the_device_heap() {
-    let roomy = app();
+    let mut roomy = common::app(MemoryRequest::default());
+    roomy.update();
     let probe = dense().attach(roomy.world().resource::<NeuraRuntime>());
     let geometry = probe.geometry();
     let footprint = geometry.weights + geometry.tensors;
     drop(probe);
 
-    let mut tight = App::new();
-    tight.add_plugins(NeuraPlugin::new(RuntimeRequest {
-        memory: MemoryRequest {
-            heap_bytes: footprint + footprint / 2,
-            ..MemoryRequest::default()
-        },
-        ..RuntimeRequest::default()
-    }));
+    let mut tight = common::app(MemoryRequest {
+        heap_bytes: footprint + footprint / 2,
+        ..MemoryRequest::default()
+    });
+    tight.update();
     let runtime = tight.world().resource::<NeuraRuntime>();
     assert!(
         runtime.heap_bytes() < footprint * 2,
@@ -235,7 +237,8 @@ fn dense() -> ModelPlan {
 #[test]
 #[should_panic(expected = "no run has named one yet")]
 fn a_run_before_the_binding_reaches_no_device() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let model = affine().attach(runtime);
     model.run(runtime, &Inputs::new().write("observation", [0.0, 1.0]));
@@ -244,7 +247,8 @@ fn a_run_before_the_binding_reaches_no_device() {
 #[test]
 #[should_panic(expected = "writing 6 numbers into a tensor of 4 numbers")]
 fn a_write_of_another_size_reaches_no_device() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let model = affine().attach(runtime);
     model.bind(runtime, &Extents::new().axis("batch", 2));
@@ -254,7 +258,8 @@ fn a_write_of_another_size_reaches_no_device() {
 #[test]
 #[should_panic(expected = "outruns the bound of 8 the graph declares")]
 fn a_live_extent_beyond_the_bound_reaches_no_device() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let model = affine().attach(runtime);
     model.bind(runtime, &Extents::new().axis("batch", 9));
@@ -263,7 +268,8 @@ fn a_live_extent_beyond_the_bound_reaches_no_device() {
 #[test]
 #[should_panic(expected = "the live length of rows binds no host extent of this model")]
 fn a_live_extent_of_another_name_reaches_no_device() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let model = affine().attach(runtime);
     model.bind(runtime, &Extents::new().axis("rows", 2));
@@ -272,7 +278,8 @@ fn a_live_extent_of_another_name_reaches_no_device() {
 #[test]
 #[should_panic(expected = "a model of 1 host extents binds 0 live lengths")]
 fn a_binding_that_names_no_extent_reaches_no_device() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let model = affine().attach(runtime);
     model.bind(runtime, &Extents::new());
@@ -281,7 +288,8 @@ fn a_binding_that_names_no_extent_reaches_no_device() {
 #[test]
 #[should_panic(expected = "the model holds no input under the role target")]
 fn a_write_to_an_undeclared_role_reaches_no_device() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let model = affine().attach(runtime);
     model.bind(runtime, &Extents::new().axis("batch", 1));
@@ -291,7 +299,8 @@ fn a_write_to_an_undeclared_role_reaches_no_device() {
 #[test]
 #[should_panic(expected = "the model holds no output under the role loss")]
 fn a_read_of_an_undeclared_role_reaches_no_device() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let model = affine().attach(runtime);
     let _ = model.read(runtime, "loss");

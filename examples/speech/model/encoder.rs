@@ -4,29 +4,24 @@ use crate::model::parameters::{Layout, Parameters};
 use neura::{Conv2d, Element, Graph, Init, LayerNorm, Linear, Shape, Value, Window};
 
 pub struct Encoder {
-    conv1: Conv2d<'static>,
-    conv2: Conv2d<'static>,
-    positions: Value<'static>,
+    conv1: Conv2d,
+    conv2: Conv2d,
+    positions: Value,
     blocks: Vec<Block>,
-    norm: LayerNorm<'static>,
+    norm: LayerNorm,
     cross: Vec<CrossProjection>,
 }
 
 struct Block {
     attention: SelfAttention,
-    attention_norm: LayerNorm<'static>,
-    up: Linear<'static>,
-    down: Linear<'static>,
-    mlp_norm: LayerNorm<'static>,
+    attention_norm: LayerNorm,
+    up: Linear,
+    down: Linear,
+    mlp_norm: LayerNorm,
 }
 
 impl Block {
-    fn declare(
-        graph: &Graph<'static>,
-        parameters: &mut Parameters,
-        prefix: &str,
-        dims: &Dims,
-    ) -> Self {
+    fn declare(graph: &Graph, parameters: &mut Parameters, prefix: &str, dims: &Dims) -> Self {
         let attention_norm = LayerNorm::new(
             graph,
             &format!("{prefix}.self_attn_layer_norm"),
@@ -121,7 +116,7 @@ impl Block {
         }
     }
 
-    fn forward(&self, graph: &Graph<'static>, hidden: Value<'static>) -> Value<'static> {
+    fn forward(&self, graph: &Graph, hidden: Value) -> Value {
         let attended = graph.add(
             hidden,
             self.attention
@@ -136,14 +131,14 @@ impl Block {
 }
 
 impl Encoder {
-    pub fn build(graph: &Graph<'static>, parameters: &mut Parameters, dims: &Dims) -> Self {
+    pub fn build(graph: &Graph, parameters: &mut Parameters, dims: &Dims) -> Self {
         let prefix = "model.encoder";
         let conv1 = Conv2d::new(
             graph,
             &format!("{prefix}.conv1"),
             [dims.mel_bins, dims.state],
             1,
-            Window::new([1, 3], [1, 1], [0, 1]),
+            Window::new([1, 3], [1, 1], [0, 1], [1, 1]),
             Init::Zero,
             Element::Single,
         );
@@ -164,7 +159,7 @@ impl Encoder {
             &format!("{prefix}.conv2"),
             [dims.state, dims.state],
             1,
-            Window::new([1, 3], [1, 2], [0, 1]),
+            Window::new([1, 3], [1, 2], [0, 1], [1, 1]),
             Init::Zero,
             Element::Single,
         );
@@ -231,7 +226,7 @@ impl Encoder {
         }
     }
 
-    pub fn forward(&self, graph: &Graph<'static>, mel: Value<'static>) -> Value<'static> {
+    pub fn forward(&self, graph: &Graph, mel: Value) -> Value {
         let first = graph.gelu(self.conv1.forward(graph, mel));
         let second = graph.gelu(self.conv2.forward(graph, first));
         let mut hidden = graph.add(graph.permute(second, [0, 2, 3, 1]), self.positions);
@@ -241,11 +236,7 @@ impl Encoder {
         self.norm.forward(graph, hidden)
     }
 
-    pub fn project(
-        &self,
-        graph: &Graph<'static>,
-        states: Value<'static>,
-    ) -> Vec<(Value<'static>, Value<'static>)> {
+    pub fn project(&self, graph: &Graph, states: Value) -> Vec<(Value, Value)> {
         self.cross
             .iter()
             .map(|projection| projection.forward(graph, states))

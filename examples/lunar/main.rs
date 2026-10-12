@@ -24,8 +24,9 @@ mod world;
 
 use bevy::camera::ScalingMode;
 use bevy::prelude::*;
-use bevy_neura::NeuraPlugin;
-use neura::{MemoryRequest, RuntimeRequest};
+use bevy::render::pipelined_rendering::PipelinedRenderingPlugin;
+use bevy_neura::{NeuraMemory, NeuraPlugin};
+use neura::MemoryRequest;
 
 const DEVICE_HEAP: u64 = 1 << 28;
 const READBACK: u64 = 1 << 22;
@@ -41,24 +42,26 @@ enum Phase {
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "lunar lander - PPO on bevy-neura".to_string(),
-                    resolution: WINDOW.into(),
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "lunar lander - PPO on bevy-neura".to_string(),
+                        resolution: WINDOW.into(),
+                        ..default()
+                    }),
                     ..default()
-                }),
-                ..default()
-            }),
-            NeuraPlugin::new(RuntimeRequest {
-                memory: MemoryRequest {
-                    heap_bytes: DEVICE_HEAP,
-                    readback_bytes: READBACK,
-                    readback_slots: 4,
-                },
-                ..RuntimeRequest::default()
-            }),
+                })
+                .build()
+                .disable::<PipelinedRenderingPlugin>(),
+            NeuraPlugin,
             common::LoadingPlugin::new(Phase::Loading, "lunar lander - PPO on bevy-neura"),
         ))
+        .insert_resource(NeuraMemory(MemoryRequest {
+            heap_bytes: DEVICE_HEAP,
+            readback_bytes: READBACK,
+            readback_slots: 4,
+            ..MemoryRequest::default()
+        }))
         .init_state::<Phase>()
         .insert_resource(ClearColor(Color::srgb(0.01, 0.012, 0.03)))
         .add_systems(Startup, camera)

@@ -1,6 +1,8 @@
+mod common;
+
 use bevy::prelude::*;
-use bevy_neura::{NeuraPlugin, NeuraRuntime};
-use neura::{MemoryRequest, RuntimeRequest};
+use bevy_neura::NeuraRuntime;
+use neura::MemoryRequest;
 use safetensors::SafeTensors;
 use std::path::{Path, PathBuf};
 
@@ -22,16 +24,12 @@ const DEVICE_HEAP: u64 = 1 << 30;
 const READBACK: u64 = 1 << 23;
 
 fn app(heap_bytes: u64) -> App {
-    let mut app = App::new();
-    app.add_plugins(NeuraPlugin::new(RuntimeRequest {
-        memory: MemoryRequest {
-            heap_bytes,
-            readback_bytes: READBACK,
-            readback_slots: 4,
-        },
-        ..RuntimeRequest::default()
-    }));
-    app
+    common::app(MemoryRequest {
+        heap_bytes,
+        readback_bytes: READBACK,
+        readback_slots: 4,
+        ..MemoryRequest::default()
+    })
 }
 
 fn data(name: &str) -> PathBuf {
@@ -204,7 +202,8 @@ fn a_small_model_answers_the_reference() {
     let directory = data("fixture");
     let store = bytes(data("fixture_golden.safetensors"));
     let golden = SafeTensors::deserialize(&store).expect("golden");
-    let app = app(1 << 26);
+    let mut app = app(1 << 26);
+    app.update();
     let mel_input = floats(&golden, "mel");
     let (issued, _) = answers_of(&app, &directory, &golden, mel_input, &[1, 2, 3, 4], 1e-4);
     let expected = floats(&golden, "tokens")
@@ -228,7 +227,8 @@ fn a_downloaded_model_answers_the_reference() {
     let mel = Mel::of(&model, dims.mel_bins);
     let spectrogram = mel.spectrogram(&audio);
     assert_close("a spectrogram", &spectrogram, &floats(&golden, "mel"), 1e-3);
-    let app = app(DEVICE_HEAP);
+    let mut app = app(DEVICE_HEAP);
+    app.update();
     let prompt = [
         tokenizer::SOT,
         tokenizer::SOT + 1,
@@ -264,7 +264,8 @@ fn a_model_knows_silence_from_speech() {
             true,
         ));
     }
-    let app = app(DEVICE_HEAP);
+    let mut app = app(DEVICE_HEAP);
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let dims = Dims::of(&model);
     let mel = Mel::of(&model, dims.mel_bins);

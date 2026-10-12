@@ -3,13 +3,13 @@ use crate::model::parameters::{Layout, Parameters};
 use neura::{AttentionOptions, Graph, Shape, Value};
 
 pub struct Projection {
-    weight: Value<'static>,
-    bias: Option<Value<'static>>,
+    weight: Value,
+    bias: Option<Value>,
 }
 
 impl Projection {
     fn declare(
-        graph: &Graph<'static>,
+        graph: &Graph,
         parameters: &mut Parameters,
         prefix: &str,
         dims: &Dims,
@@ -32,7 +32,7 @@ impl Projection {
         Self { weight, bias }
     }
 
-    pub fn forward(&self, graph: &Graph<'static>, input: Value<'static>) -> Value<'static> {
+    pub fn forward(&self, graph: &Graph, input: Value) -> Value {
         let projected = graph.matmul(input, self.weight);
         match self.bias {
             Some(bias) => graph.add(projected, bias),
@@ -42,17 +42,12 @@ impl Projection {
 }
 
 pub struct Merge {
-    weight: Value<'static>,
-    bias: Value<'static>,
+    weight: Value,
+    bias: Value,
 }
 
 impl Merge {
-    fn declare(
-        graph: &Graph<'static>,
-        parameters: &mut Parameters,
-        prefix: &str,
-        dims: &Dims,
-    ) -> Self {
+    fn declare(graph: &Graph, parameters: &mut Parameters, prefix: &str, dims: &Dims) -> Self {
         Self {
             weight: parameters.declare(
                 graph,
@@ -69,7 +64,7 @@ impl Merge {
         }
     }
 
-    fn forward(&self, graph: &Graph<'static>, attended: Value<'static>) -> Value<'static> {
+    fn forward(&self, graph: &Graph, attended: Value) -> Value {
         let merged = graph.sum_axis(graph.matmul(attended, self.weight), 0);
         graph.add(merged, self.bias)
     }
@@ -80,42 +75,33 @@ pub struct SelfAttention {
     key: Projection,
     value: Projection,
     merge: Merge,
-    scale: f32,
+    scale: Value,
 }
 
 impl SelfAttention {
-    pub fn declare(
-        graph: &Graph<'static>,
-        parameters: &mut Parameters,
-        prefix: &str,
-        dims: &Dims,
-    ) -> Self {
+    pub fn declare(graph: &Graph, parameters: &mut Parameters, prefix: &str, dims: &Dims) -> Self {
         Self {
             query: Projection::declare(graph, parameters, &format!("{prefix}.q_proj"), dims, true),
             key: Projection::declare(graph, parameters, &format!("{prefix}.k_proj"), dims, false),
             value: Projection::declare(graph, parameters, &format!("{prefix}.v_proj"), dims, true),
             merge: Merge::declare(graph, parameters, &format!("{prefix}.out_proj"), dims),
-            scale: dims.scale(),
+            scale: graph.knob(dims.scale()),
         }
     }
 
-    pub fn forward(
-        &self,
-        graph: &Graph<'static>,
-        hidden: Value<'static>,
-        causal: bool,
-    ) -> Value<'static> {
+    pub fn forward(&self, graph: &Graph, hidden: Value, causal: bool) -> Value {
         let attended = graph.attention(
             self.query.forward(graph, hidden),
             self.key.forward(graph, hidden),
             self.value.forward(graph, hidden),
             AttentionOptions {
-                scale: self.scale,
+                scale: Some(self.scale),
                 causal,
                 origin: None,
                 segments: None,
                 reach: None,
                 query_segments: None,
+                bias: None,
             },
         );
         self.merge.forward(graph, attended)
@@ -125,41 +111,31 @@ impl SelfAttention {
 pub struct CrossAttention {
     query: Projection,
     merge: Merge,
-    scale: f32,
+    scale: Value,
 }
 
 impl CrossAttention {
-    pub fn declare(
-        graph: &Graph<'static>,
-        parameters: &mut Parameters,
-        prefix: &str,
-        dims: &Dims,
-    ) -> Self {
+    pub fn declare(graph: &Graph, parameters: &mut Parameters, prefix: &str, dims: &Dims) -> Self {
         Self {
             query: Projection::declare(graph, parameters, &format!("{prefix}.q_proj"), dims, true),
             merge: Merge::declare(graph, parameters, &format!("{prefix}.out_proj"), dims),
-            scale: dims.scale(),
+            scale: graph.knob(dims.scale()),
         }
     }
 
-    pub fn forward(
-        &self,
-        graph: &Graph<'static>,
-        hidden: Value<'static>,
-        keys: Value<'static>,
-        values: Value<'static>,
-    ) -> Value<'static> {
+    pub fn forward(&self, graph: &Graph, hidden: Value, keys: Value, values: Value) -> Value {
         let attended = graph.attention(
             self.query.forward(graph, hidden),
             keys,
             values,
             AttentionOptions {
-                scale: self.scale,
+                scale: Some(self.scale),
                 causal: false,
                 origin: None,
                 segments: None,
                 reach: None,
                 query_segments: None,
+                bias: None,
             },
         );
         self.merge.forward(graph, attended)
@@ -172,23 +148,14 @@ pub struct CrossProjection {
 }
 
 impl CrossProjection {
-    pub fn declare(
-        graph: &Graph<'static>,
-        parameters: &mut Parameters,
-        prefix: &str,
-        dims: &Dims,
-    ) -> Self {
+    pub fn declare(graph: &Graph, parameters: &mut Parameters, prefix: &str, dims: &Dims) -> Self {
         Self {
             key: Projection::declare(graph, parameters, &format!("{prefix}.k_proj"), dims, false),
             value: Projection::declare(graph, parameters, &format!("{prefix}.v_proj"), dims, true),
         }
     }
 
-    pub fn forward(
-        &self,
-        graph: &Graph<'static>,
-        states: Value<'static>,
-    ) -> (Value<'static>, Value<'static>) {
+    pub fn forward(&self, graph: &Graph, states: Value) -> (Value, Value) {
         (
             self.key.forward(graph, states),
             self.value.forward(graph, states),

@@ -6,8 +6,8 @@ use neura_abi::NO_VALUE;
 #[derive(Default)]
 pub struct Roles {
     axes: Vec<(Role, Free)>,
-    inputs: Vec<(Role, Value<'static>)>,
-    outputs: Vec<(Role, Value<'static>)>,
+    inputs: Vec<(Role, Value)>,
+    outputs: Vec<(Role, Value)>,
 }
 
 impl Roles {
@@ -24,7 +24,7 @@ impl Roles {
         self
     }
 
-    pub fn input(mut self, role: Role, value: Value<'static>) -> Self {
+    pub fn input(mut self, role: Role, value: Value) -> Self {
         assert!(
             !self.inputs.iter().any(|(name, _)| *name == role),
             "two inputs answer to the role {role}",
@@ -34,7 +34,7 @@ impl Roles {
         self
     }
 
-    pub fn output(mut self, role: Role, value: Value<'static>) -> Self {
+    pub fn output(mut self, role: Role, value: Value) -> Self {
         assert!(
             !self.outputs.iter().any(|(name, _)| *name == role),
             "two outputs answer to the role {role}",
@@ -44,7 +44,7 @@ impl Roles {
         self
     }
 
-    fn assert_names_one(&self, role: Role, value: Value<'static>) {
+    fn assert_names_one(&self, role: Role, value: Value) {
         if let Some((_, held)) = self
             .inputs
             .iter()
@@ -61,7 +61,7 @@ impl Roles {
         }
     }
 
-    pub(crate) fn assert_binds(&self, graph: &Graph<'static>) {
+    pub(crate) fn assert_binds(&self, graph: &Graph) {
         for (_, value) in self.inputs.iter().chain(&self.outputs) {
             graph.shape(*value);
         }
@@ -109,7 +109,7 @@ impl Roles {
         ordered.into_iter().map(|(_, length)| length).collect()
     }
 
-    pub(crate) fn value(&self, role: Role) -> Value<'static> {
+    pub(crate) fn value(&self, role: Role) -> Value {
         self.inputs
             .iter()
             .chain(&self.outputs)
@@ -118,7 +118,7 @@ impl Roles {
             .unwrap_or_else(|| panic!("the model holds no value under the role {role}"))
     }
 
-    pub(crate) fn input_value(&self, role: Role) -> Value<'static> {
+    pub(crate) fn input_value(&self, role: Role) -> Value {
         self.inputs
             .iter()
             .find(|(name, _)| *name == role)
@@ -126,7 +126,7 @@ impl Roles {
             .unwrap_or_else(|| panic!("the model holds no input under the role {role}"))
     }
 
-    pub(crate) fn output_value(&self, role: Role) -> Value<'static> {
+    pub(crate) fn output_value(&self, role: Role) -> Value {
         self.outputs
             .iter()
             .find(|(name, _)| *name == role)
@@ -138,7 +138,7 @@ impl Roles {
         self.outputs.iter().map(|(role, _)| *role).collect()
     }
 
-    pub(crate) fn retains(&self) -> Vec<Value<'static>> {
+    pub(crate) fn retains(&self) -> Vec<Value> {
         self.outputs.iter().map(|(_, value)| *value).collect()
     }
 

@@ -3,13 +3,13 @@ use crate::roles::Roles;
 use neura::{Graph, Runtime};
 
 pub struct ModelPlan {
-    graph: Graph<'static>,
+    graph: Graph,
     roles: Roles,
 }
 
 impl ModelPlan {
-    pub fn build(roles_of: impl FnOnce(&Graph<'static>) -> Roles) -> Self {
-        let graph: Graph<'static> = Graph::new();
+    pub fn build(roles_of: impl FnOnce(&Graph) -> Roles) -> Self {
+        let graph: Graph = Graph::new();
         let roles = roles_of(&graph);
         roles.assert_binds(&graph);
         Self { graph, roles }
@@ -37,7 +37,7 @@ impl ModelPlan {
         Model::of(roles, program)
     }
 
-    fn retained(self) -> (Graph<'static>, Roles) {
+    fn retained(self) -> (Graph, Roles) {
         for value in self.roles.retains() {
             self.graph.retain(value);
         }

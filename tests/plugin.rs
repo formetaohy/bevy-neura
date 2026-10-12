@@ -1,6 +1,10 @@
+mod common;
+
 use bevy::prelude::*;
+use bevy::render::pipelined_rendering::PipelinedRenderingPlugin;
+use bevy::render::renderer::RenderAdapterInfo;
 use bevy_neura::{Inputs, Model, ModelPlan, NeuraPlugin, NeuraRuntime, Roles};
-use neura::{AdapterId, AdapterPolicy, Element, GpuRequest, Init, Linear, RuntimeRequest, Shape};
+use neura::{Element, Init, Linear, MemoryRequest, Shape};
 
 #[derive(Resource, Default)]
 struct Answer(f32);
@@ -28,21 +32,42 @@ fn drive(runtime: Res<NeuraRuntime>, models: Query<&Model>, mut answer: ResMut<A
 }
 
 #[test]
-fn the_device_of_the_app_reaches_a_resource() {
-    let mut app = App::new();
-    app.add_plugins(NeuraPlugin::default());
+fn the_runtime_borrows_the_device_of_the_app() {
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
-    assert!(!runtime.context().adapter_info().name.is_empty());
+    let rendered = app.world().resource::<RenderAdapterInfo>();
+    assert_eq!(
+        runtime.context().adapter_info().name,
+        rendered.name,
+        "the runtime holds the compute device of {} where the App renders on {}",
+        runtime.context().adapter_info().name,
+        rendered.name,
+    );
     assert!(runtime.heap_bytes() > 0);
     assert!(runtime.readback_capacity() > 0);
     assert!(runtime.readback_slots() > 0);
 }
 
 #[test]
+fn a_memory_request_of_the_app_reaches_the_runtime() {
+    let mut app = common::app(MemoryRequest {
+        heap_bytes: 1 << 24,
+        readback_bytes: 1 << 20,
+        readback_slots: 3,
+        ..MemoryRequest::default()
+    });
+    app.update();
+    let runtime = app.world().resource::<NeuraRuntime>();
+    assert_eq!(runtime.heap_bytes(), 1 << 24);
+    assert_eq!(runtime.readback_capacity(), 1 << 20);
+    assert_eq!(runtime.readback_slots(), 3);
+}
+
+#[test]
 fn a_system_drives_a_model_from_the_schedule() {
-    let mut app = App::new();
-    app.add_plugins(NeuraPlugin::default())
-        .init_resource::<Answer>()
+    let mut app = common::app(MemoryRequest::default());
+    app.init_resource::<Answer>()
         .add_systems(Startup, spawn_model)
         .add_systems(Update, drive);
     for _ in 0..3 {
@@ -56,16 +81,16 @@ fn a_system_drives_a_model_from_the_schedule() {
 }
 
 #[test]
-#[should_panic(expected = "the Neura device does not open")]
-fn a_device_that_no_adapter_answers_fails_the_plugin() {
-    let _ = NeuraPlugin::new(RuntimeRequest {
-        gpu: GpuRequest {
-            adapter: AdapterPolicy::Identity(AdapterId::Numeric {
-                vendor: 0xdead,
-                device: 0xbeef,
-            }),
-            ..GpuRequest::default()
-        },
-        ..RuntimeRequest::default()
-    });
+#[should_panic(expected = "the App carries no render device")]
+fn an_app_without_a_render_device_reaches_no_runtime() {
+    App::new().add_plugins(NeuraPlugin).update();
+}
+
+#[test]
+#[should_panic(expected = "disable PipelinedRenderingPlugin")]
+fn an_app_that_pipelines_its_rendering_reaches_no_runtime() {
+    let mut app = App::new();
+    app.add_plugins((PipelinedRenderingPlugin, NeuraPlugin));
+    app.finish();
+    app.cleanup();
 }

@@ -6,14 +6,14 @@ const TRUNK_BOUND: f32 = 0.35;
 const POLICY_BOUND: f32 = 0.01;
 const VALUE_BOUND: f32 = 0.5;
 
-pub struct Net<'g> {
-    trunk: [Linear<'g>; 2],
-    policy: Linear<'g>,
-    value: Linear<'g>,
+pub struct Net {
+    trunk: [Linear; 2],
+    policy: Linear,
+    value: Linear,
 }
 
-impl<'g> Net<'g> {
-    pub fn build(graph: &Graph<'g>) -> Self {
+impl Net {
+    pub fn build(graph: &Graph) -> Self {
         let trunk = Init::Uniform {
             low: -TRUNK_BOUND,
             high: TRUNK_BOUND,
@@ -62,7 +62,7 @@ impl<'g> Net<'g> {
         }
     }
 
-    pub fn forward(&self, graph: &Graph<'g>, observation: Value<'g>) -> (Value<'g>, Value<'g>) {
+    pub fn forward(&self, graph: &Graph, observation: Value) -> (Value, Value) {
         let hidden = graph.tanh(self.trunk[0].forward(graph, observation));
         let hidden = graph.tanh(self.trunk[1].forward(graph, hidden));
         (
@@ -71,7 +71,7 @@ impl<'g> Net<'g> {
         )
     }
 
-    pub fn parameters(&self) -> Vec<Value<'g>> {
+    pub fn parameters(&self) -> Vec<Value> {
         let mut parameters = Vec::new();
         for layer in &self.trunk {
             parameters.extend(layer.parameters());

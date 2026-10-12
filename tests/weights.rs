@@ -1,17 +1,13 @@
+mod common;
+
 use bevy::prelude::*;
-use bevy_neura::{Extents, Inputs, ModelPlan, NeuraPlugin, NeuraRuntime, Roles};
-use neura::{AdamW, Element, Init, Linear, Sgd, Shape, mse_loss};
+use bevy_neura::{Extents, Inputs, ModelPlan, NeuraRuntime, Roles};
+use neura::{AdamW, Element, Init, Linear, MemoryRequest, Sgd, Shape, mse_loss};
 
 const VALUES: [f32; 4] = [0.5, 1.5, -1.0, 2.0];
 const TARGETS: [f32; 4] = [1.0, 1.0, -1.0, 0.5];
 const RATE: f32 = 0.1;
 const START: f32 = 0.5;
-
-fn app() -> App {
-    let mut app = App::new();
-    app.add_plugins(NeuraPlugin::default());
-    app
-}
 
 fn scalar() -> ModelPlan {
     ModelPlan::build(|graph| {
@@ -20,7 +16,7 @@ fn scalar() -> ModelPlan {
         let target = graph.input(Shape::matrix(4, 1), Element::Single);
         let loss = mse_loss(graph, graph.mul(observation, weight), target);
         let gradients = graph.backward(loss);
-        let mut optimizer = Sgd::new(graph, RATE, 0.0);
+        let mut optimizer = Sgd::new(graph, "optimizer", RATE, 0.0);
         optimizer.track(graph, weight);
         optimizer.step(graph, &gradients);
         Roles::new()
@@ -97,7 +93,8 @@ fn close(actual: f32, expected: f32, tolerance: f32) -> bool {
 
 #[test]
 fn a_run_updates_the_weights_its_program_holds() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let model = scalar().attach(runtime);
     model.run(runtime, &written(VALUES, TARGETS));
@@ -117,7 +114,8 @@ fn a_run_updates_the_weights_its_program_holds() {
 
 #[test]
 fn every_run_reads_the_loss_of_its_own_inputs() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let model = scalar().attach(runtime);
     let values = [1.0, -0.5, 0.25, -2.0];
@@ -154,7 +152,8 @@ fn every_run_reads_the_loss_of_its_own_inputs() {
 
 #[test]
 fn repeated_runs_converge_on_the_reference() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let model = dynamic().attach(runtime);
     model.bind(runtime, &Extents::new().axis("batch", 1));

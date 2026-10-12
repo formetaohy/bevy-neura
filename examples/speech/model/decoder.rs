@@ -4,32 +4,27 @@ use crate::model::parameters::{Layout, Parameters};
 use neura::{Element, Embedding, Graph, Init, LayerNorm, Linear, Shape, Value};
 
 pub struct Decoder {
-    table: Embedding<'static>,
-    positions: Value<'static>,
+    table: Embedding,
+    positions: Value,
     blocks: Vec<Block>,
-    norm: LayerNorm<'static>,
-    head: Value<'static>,
+    norm: LayerNorm,
+    head: Value,
     prefix: u32,
     state: u32,
 }
 
 struct Block {
     attention: SelfAttention,
-    attention_norm: LayerNorm<'static>,
+    attention_norm: LayerNorm,
     cross: CrossAttention,
-    cross_norm: LayerNorm<'static>,
-    up: Linear<'static>,
-    down: Linear<'static>,
-    mlp_norm: LayerNorm<'static>,
+    cross_norm: LayerNorm,
+    up: Linear,
+    down: Linear,
+    mlp_norm: LayerNorm,
 }
 
 impl Block {
-    fn declare(
-        graph: &Graph<'static>,
-        parameters: &mut Parameters,
-        prefix: &str,
-        dims: &Dims,
-    ) -> Self {
+    fn declare(graph: &Graph, parameters: &mut Parameters, prefix: &str, dims: &Dims) -> Self {
         let mut norm = |what: &str| {
             let norm = LayerNorm::new(
                 graph,
@@ -117,13 +112,7 @@ impl Block {
         }
     }
 
-    fn forward(
-        &self,
-        graph: &Graph<'static>,
-        hidden: Value<'static>,
-        keys: Value<'static>,
-        values: Value<'static>,
-    ) -> Value<'static> {
+    fn forward(&self, graph: &Graph, hidden: Value, keys: Value, values: Value) -> Value {
         let attended = graph.add(
             hidden,
             self.attention
@@ -147,7 +136,7 @@ impl Block {
 }
 
 impl Decoder {
-    pub fn build(graph: &Graph<'static>, parameters: &mut Parameters, dims: &Dims) -> Self {
+    pub fn build(graph: &Graph, parameters: &mut Parameters, dims: &Dims) -> Self {
         let prefix = "model.decoder";
         let table = Embedding::new(
             graph,
@@ -214,12 +203,12 @@ impl Decoder {
 
     pub fn forward(
         &self,
-        graph: &Graph<'static>,
-        tokens: Value<'static>,
-        placements: Value<'static>,
-        cursor: Value<'static>,
-        cross: &[(Value<'static>, Value<'static>)],
-    ) -> (Value<'static>, Value<'static>) {
+        graph: &Graph,
+        tokens: Value,
+        placements: Value,
+        cursor: Value,
+        cross: &[(Value, Value)],
+    ) -> (Value, Value) {
         assert_eq!(
             cross.len(),
             self.blocks.len(),

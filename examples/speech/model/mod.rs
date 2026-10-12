@@ -21,7 +21,7 @@ const SILENT: f32 = 0.6;
 
 pub struct EncoderModel {
     model: Model,
-    cross: Vec<(Value<'static>, Value<'static>)>,
+    cross: Vec<(Value, Value)>,
 }
 
 impl EncoderModel {
@@ -68,7 +68,7 @@ impl EncoderModel {
 
 pub struct DecoderModel {
     model: Model,
-    cross: Vec<(Value<'static>, Value<'static>)>,
+    cross: Vec<(Value, Value)>,
 }
 
 impl DecoderModel {
@@ -94,7 +94,7 @@ impl DecoderModel {
                         ),
                     )
                 })
-                .collect::<Vec<(Value<'static>, Value<'static>)>>();
+                .collect::<Vec<(Value, Value)>>();
             let (logits, token) = decoder.forward(graph, tokens, positions, cursor, &projected);
             graph.retain(token);
             graph.retain(logits);

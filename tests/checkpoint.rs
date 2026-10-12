@@ -1,15 +1,11 @@
+mod common;
+
 use bevy::prelude::*;
-use bevy_neura::{Inputs, Model, ModelPlan, NeuraPlugin, NeuraRuntime, Roles};
-use neura::{AdamW, Checkpoint, Element, Init, Linear, Shape, mse_loss};
+use bevy_neura::{Inputs, Model, ModelPlan, NeuraRuntime, Roles};
+use neura::{AdamW, Checkpoint, Element, Init, Linear, MemoryRequest, Shape, mse_loss};
 
 const VALUES: [f32; 4] = [0.25, -0.5, 1.5, 2.0];
 const TARGETS: [f32; 4] = [-1.0, 0.5, 2.0, -1.5];
-
-fn app() -> App {
-    let mut app = App::new();
-    app.add_plugins(NeuraPlugin::default());
-    app
-}
 
 fn updating() -> ModelPlan {
     ModelPlan::build(|graph| {
@@ -63,7 +59,8 @@ fn distance(left: &[f32], right: &[f32]) -> f32 {
 
 #[test]
 fn a_checkpoint_returns_the_weights_a_shared_store_held() {
-    let app = app();
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let learner = updating().attach(runtime);
     let reader = reading().share(runtime, &learner);

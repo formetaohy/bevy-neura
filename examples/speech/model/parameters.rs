@@ -13,7 +13,7 @@ pub enum Layout {
 pub struct Parameter {
     name: String,
     source: String,
-    value: Value<'static>,
+    value: Value,
     shape: [u32; 4],
     layout: Layout,
 }
@@ -34,24 +34,18 @@ impl Parameters {
         Self::default()
     }
 
-    pub fn declare(
-        &mut self,
-        graph: &Graph<'static>,
-        name: &str,
-        shape: Shape,
-        layout: Layout,
-    ) -> Value<'static> {
+    pub fn declare(&mut self, graph: &Graph, name: &str, shape: Shape, layout: Layout) -> Value {
         self.declare_from(graph, name, name, shape, layout)
     }
 
     pub fn declare_from(
         &mut self,
-        graph: &Graph<'static>,
+        graph: &Graph,
         name: &str,
         source: &str,
         shape: Shape,
         layout: Layout,
-    ) -> Value<'static> {
+    ) -> Value {
         assert!(
             !self.entries.iter().any(|entry| entry.name == name),
             "two parameters of a model answer to the name {name}",
@@ -67,7 +61,7 @@ impl Parameters {
         value
     }
 
-    pub fn adopt(&mut self, name: &str, shape: Shape, layout: Layout, value: Value<'static>) {
+    pub fn adopt(&mut self, name: &str, shape: Shape, layout: Layout, value: Value) {
         assert!(
             !self.entries.iter().any(|entry| entry.name == name),
             "two parameters of a model answer to the name {name}",

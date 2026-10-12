@@ -25,10 +25,13 @@ mod train;
 #[path = "../examples/lunar/world.rs"]
 mod world;
 
+mod common;
+
 use bevy::prelude::*;
-use bevy_neura::{NeuraPlugin, NeuraRuntime};
+use bevy_neura::NeuraRuntime;
 use body::{Body, Part};
 use env::{Action, Ending, Lander, OBSERVATION, STEP};
+use neura::MemoryRequest;
 use shape::Polygon;
 use terrain::Terrain;
 use world::{GRAVITY, World};
@@ -263,8 +266,7 @@ fn a_rollout_carries_a_reward_back_to_its_landing() {
 
 #[test]
 fn a_drawn_action_of_the_policy_matches_the_logarithm_it_reports() {
-    let mut app = App::new();
-    app.add_plugins(NeuraPlugin::default());
+    let mut app = common::app(MemoryRequest::default());
     app.update();
     let runtime = app.world().resource::<NeuraRuntime>().clone();
     let learner = learner::Learner::attach(&runtime);
@@ -312,9 +314,8 @@ fn build(runtime: Res<NeuraRuntime>, mut commands: Commands) {
 
 #[test]
 fn the_training_lifts_the_policy_of_the_lander() {
-    let mut app = App::new();
-    app.add_plugins(NeuraPlugin::default())
-        .init_resource::<Time>()
+    let mut app = common::app(MemoryRequest::default());
+    app.init_resource::<Time>()
         .add_systems(Startup, build)
         .add_systems(Update, train::advance);
     app.update();
