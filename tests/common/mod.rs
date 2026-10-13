@@ -53,7 +53,7 @@ const NATIVE: wgpu::Backends = if cfg!(any(target_os = "macos", target_os = "ios
     wgpu::Backends::VULKAN
 };
 
-fn settings() -> WgpuSettings {
+pub(crate) fn settings() -> WgpuSettings {
     WgpuSettings {
         backends: Some(wgpu::Backends::from_env().unwrap_or(NATIVE)),
         ..default()

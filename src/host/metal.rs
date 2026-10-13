@@ -1,8 +1,12 @@
 use super::{lent, request};
 use crate::runtime::NeuraRuntime;
-use neura::{HostAdvance, HostDevice, MemoryRequest, Runtime};
+use neura::{HostAdvance, HostDevice, HostIdentity, MemoryRequest, Runtime};
 use wgpu::Device;
 use wgpu::hal::metal;
+
+pub(super) fn identity(native: &metal::Device) -> HostIdentity {
+    HostDevice::metal(native.raw_device()).identity()
+}
 
 pub(super) fn borrow(
     device: &Device,
