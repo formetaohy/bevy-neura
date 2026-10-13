@@ -1,7 +1,6 @@
 mod common;
 
 use bevy::prelude::*;
-use bevy::render::pipelined_rendering::PipelinedRenderingPlugin;
 use bevy::render::renderer::RenderAdapterInfo;
 use bevy_neura::{Inputs, Model, ModelPlan, NeuraPlugin, NeuraRuntime, Roles};
 use neura::{Element, Init, Linear, MemoryRequest, Shape};
@@ -87,10 +86,17 @@ fn an_app_without_a_render_device_reaches_no_runtime() {
 }
 
 #[test]
-#[should_panic(expected = "disable PipelinedRenderingPlugin")]
-fn an_app_that_pipelines_its_rendering_reaches_no_runtime() {
-    let mut app = App::new();
-    app.add_plugins((PipelinedRenderingPlugin, NeuraPlugin));
-    app.finish();
-    app.cleanup();
+fn a_pipelined_app_drives_a_model_from_the_schedule() {
+    let mut app = common::assemble(MemoryRequest::default(), true);
+    app.init_resource::<Answer>()
+        .add_systems(Startup, spawn_model)
+        .add_systems(Update, drive);
+    for _ in 0..8 {
+        app.update();
+        let answer = app.world().resource::<Answer>().0;
+        assert!(
+            (answer - 3.0).abs() < 1e-6,
+            "a layer of weight 2 answers {answer} where twice 1.5 reads 3",
+        );
+    }
 }

@@ -11,26 +11,32 @@ use neura::MemoryRequest;
 use std::sync::Mutex;
 
 pub fn app(memory: MemoryRequest) -> App {
+    assemble(memory, false)
+}
+
+pub(crate) fn assemble(memory: MemoryRequest, pipelined: bool) -> App {
     static ONE_INSTANCE_AT_A_TIME: Mutex<()> = Mutex::new(());
     let _guard = ONE_INSTANCE_AT_A_TIME
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     let mut app = App::new();
-    app.add_plugins(
-        DefaultPlugins
-            .set(WindowPlugin {
-                primary_window: None,
-                ..default()
-            })
-            .set(RenderPlugin {
-                render_creation: RenderCreation::Automatic(Box::new(settings())),
-                ..default()
-            })
-            .build()
-            .disable::<WinitPlugin>()
-            .disable::<LogPlugin>()
-            .disable::<PipelinedRenderingPlugin>(),
-    );
+    let plugins = DefaultPlugins
+        .set(WindowPlugin {
+            primary_window: None,
+            ..default()
+        })
+        .set(RenderPlugin {
+            render_creation: RenderCreation::Automatic(Box::new(settings())),
+            ..default()
+        })
+        .build()
+        .disable::<WinitPlugin>()
+        .disable::<LogPlugin>();
+    app.add_plugins(if pipelined {
+        plugins
+    } else {
+        plugins.disable::<PipelinedRenderingPlugin>()
+    });
     app.add_plugins(NeuraPlugin);
     app.insert_resource(NeuraMemory(memory));
     while app.plugins_state() == PluginsState::Adding {

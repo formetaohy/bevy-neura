@@ -1,9 +1,10 @@
 use crate::host;
 use crate::memory::NeuraMemory;
+use crate::queue;
+use bevy::ecs::schedule::MainThreadExecutor;
 use bevy::prelude::{App, Plugin, PreStartup, World};
-use bevy::render::pipelined_rendering::PipelinedRenderingPlugin;
 use bevy::render::renderer::RenderDevice;
-use neura::MemoryRequest;
+use neura::{HostAdvance, MemoryRequest};
 
 pub struct NeuraPlugin;
 
@@ -12,15 +13,20 @@ impl Plugin for NeuraPlugin {
         app.add_systems(PreStartup, borrow_device);
     }
 
-    fn cleanup(&self, app: &mut App) {
-        assert!(
-            !app.is_plugin_added::<PipelinedRenderingPlugin>(),
-            "the App pipelines its rendering onto a thread of its own, and Neura submits to the queue of the render device from the thread the App drives its world on: disable PipelinedRenderingPlugin",
-        );
+    fn finish(&self, app: &mut App) {
+        queue::hold(app);
     }
 }
 
 fn borrow_device(world: &mut World) {
+    let advance = world.get_resource::<MainThreadExecutor>().map(|executor| {
+        let executor = executor.0.clone();
+        HostAdvance::of(move || {
+            if let Some(ticker) = executor.ticker() {
+                let _ = ticker.try_tick();
+            }
+        })
+    });
     let memory = world
         .remove_resource::<NeuraMemory>()
         .map_or_else(MemoryRequest::default, |memory| memory.0);
@@ -33,5 +39,5 @@ fn borrow_device(world: &mut World) {
         })
         .wgpu_device()
         .clone();
-    world.insert_resource(host::borrow(&device, memory));
+    world.insert_resource(host::borrow(&device, memory, advance));
 }

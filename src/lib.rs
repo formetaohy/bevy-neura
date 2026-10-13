@@ -6,6 +6,7 @@ mod memory;
 mod model;
 mod plan;
 mod plugin;
+mod queue;
 mod role;
 mod roles;
 mod runtime;
