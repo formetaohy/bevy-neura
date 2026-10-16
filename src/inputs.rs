@@ -1,4 +1,4 @@
-use crate::role::Role;
+use crate::roles::Role;
 
 #[derive(Clone, Debug, Default)]
 pub struct Inputs {

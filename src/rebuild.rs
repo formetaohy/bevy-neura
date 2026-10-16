@@ -1,41 +1,29 @@
 use crate::host;
-use crate::memory::NeuraMemory;
+use crate::plugin::NeuraRequest;
 use crate::runtime::NeuraRuntime;
 use bevy::ecs::schedule::MainThreadExecutor;
 use bevy::prelude::{Message, World};
 use bevy::render::renderer::RenderDevice;
-use neura::{HostAdvance, MemoryRequest};
+use neura::HostAdvance;
 
 #[derive(Message)]
 pub struct NeuraRebuilt;
 
-pub(crate) fn borrow_device(world: &mut World) {
+pub(crate) fn borrow_runtime(world: &mut World) {
     let device = render_device(world);
-    let memory = memory_request(world);
-    let advance = advance(world);
-    world.insert_resource(host::borrow(&device, memory, advance));
-}
-
-pub(crate) fn rebuild_runtime(world: &mut World) {
-    let Some(device) = world
-        .get_resource::<RenderDevice>()
-        .map(|device| device.wgpu_device().clone())
-    else {
-        return;
-    };
-    let Some(identity) = world
+    if world
         .get_resource::<NeuraRuntime>()
-        .map(NeuraRuntime::identity)
-    else {
-        return;
-    };
-    if host::identity(&device) == identity {
+        .is_some_and(|runtime| runtime.answers_to(&device))
+    {
         return;
     }
-    let memory = memory_request(world);
+    let replaced = world.contains_resource::<NeuraRuntime>();
+    let request = world.resource::<NeuraRequest>().requested();
     let advance = advance(world);
-    world.insert_resource(host::borrow(&device, memory, advance));
-    world.write_message(NeuraRebuilt);
+    world.insert_resource(host::borrow(&device, request, advance));
+    if replaced {
+        world.write_message(NeuraRebuilt);
+    }
 }
 
 fn render_device(world: &World) -> wgpu::Device {
@@ -48,12 +36,6 @@ fn render_device(world: &World) -> wgpu::Device {
         })
         .wgpu_device()
         .clone()
-}
-
-fn memory_request(world: &World) -> MemoryRequest {
-    world
-        .get_resource::<NeuraMemory>()
-        .map_or_else(MemoryRequest::default, |memory| memory.0.clone())
 }
 
 fn advance(world: &World) -> Option<HostAdvance> {

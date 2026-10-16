@@ -372,7 +372,7 @@ dependencies = [
 
 [[package]]
 name = "bevy-neura"
-version = "0.7.3"
+version = "0.7.4"
 dependencies = [
  "bevy",
  "cpal",
@@ -3384,9 +3384,9 @@ dependencies = [
 
 [[package]]
 name = "neura"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "216da154a61a1758fef59a647f30465f59affe6017fd2aa1b9e37e42e40d3739"
+checksum = "fa140cc766b2e65dcd5f6aacfc409657b7aa45797a156e63e8c4e1e795398bc6"
 dependencies = [
  "neura-abi",
  "neura-decoder",
@@ -3405,24 +3405,24 @@ dependencies = [
 
 [[package]]
 name = "neura-abi"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31da7e1819bb6f721a7d72f7be5e18327094c2b3d3253b36c5fccedb638fe015"
+checksum = "0acefb918381a58a8661b73cd4c1581c08ae7e33a47a236eb04e6ac6ebcccf18"
 dependencies = [
  "bytemuck",
 ]
 
 [[package]]
 name = "neura-ast"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5839ff01938562c5293f17063f5e274e3102fb7c7cfc98794744f7f44f311df5"
+checksum = "a8cc225f0213f479c7327483c316105868fab005aaf678538137da9333ff48f2"
 
 [[package]]
 name = "neura-compiler"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "848880b6ad6a02d8973efa15392d7cae544a613206be80c3b9eb7c35df7229cc"
+checksum = "a93b4a4f4611c2079b8414826ab0d510e57216750b5ff30945ff6f4ad59746a2"
 dependencies = [
  "neura-abi",
  "neura-ast",
@@ -3432,9 +3432,9 @@ dependencies = [
 
 [[package]]
 name = "neura-decoder"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d855449c94d2f1ed4b4eb35d9718c2d6d21ede20a8ab10c20853c37d4985164"
+checksum = "08b8045b629270f5526670054dc9cf4213283e375750a3549c9177c9b7e5d8a8"
 dependencies = [
  "neura-abi",
  "neura-gguf",
@@ -3443,20 +3443,20 @@ dependencies = [
 
 [[package]]
 name = "neura-generate"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fa50ca24a20402c3aa0d4375b2fc715fd9b160c74c8f9edd99b125bb84b2e67"
+checksum = "9f14f69aa96dc8cd8bc0edf341ea6531a5451353edfa45dbf05259e86df9028a"
 dependencies = [
- "neura-decoder",
+ "neura-graph",
  "neura-runtime",
  "neura-tokenizer",
 ]
 
 [[package]]
 name = "neura-gguf"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "daa1e755045fd8d9799f6d3978ff9daadfc7ce06defaaefa78d8e70012f27b6f"
+checksum = "f3282496ad697033ebb6761e3fdc26d17b469769c274992dbc11a50b7ac39498"
 dependencies = [
  "neura-abi",
  "neura-source",
@@ -3464,9 +3464,9 @@ dependencies = [
 
 [[package]]
 name = "neura-gpu"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b5c0bb97bddcd9ed3214ff3639f0f46dc03aed963995a135772d2a9ed6e963c"
+checksum = "96cf9da5cb3147577a6606e20197d402b62449e381938e6a16e9cd142787902f"
 dependencies = [
  "ash",
  "bitflags 2.13.2",
@@ -3480,9 +3480,9 @@ dependencies = [
 
 [[package]]
 name = "neura-graph"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2663969f49a59b4bf9e7e9d46f8b1df608dcc0e224ea3bcf5f06d01d496ea12f"
+checksum = "479c722c44863e0dc4c5cb34340e812b3172981469fbbd4be317d2f8efb8cb59"
 dependencies = [
  "neura-abi",
  "neura-pointwise",
@@ -3490,9 +3490,9 @@ dependencies = [
 
 [[package]]
 name = "neura-kernel"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ff08d2d76c2f7d1e9cbbd0ff603e294122da3b3da4fd1dc6ab086e68d8ad78f"
+checksum = "f18e8dc7ba4f6842220b62ecc973e7fa221348580f5b99f86a77e5f4e7438cf7"
 dependencies = [
  "neura-abi",
  "neura-compiler",
@@ -3503,9 +3503,9 @@ dependencies = [
 
 [[package]]
 name = "neura-macro"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25764863150b6ac73758e378dcc4634def1c46452be5f2f4869d6e08ccf92052"
+checksum = "af76e2ba3bb824738ed599abe99b96367c8e8f2ac4d8ea6866de235e24911289"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3514,9 +3514,9 @@ dependencies = [
 
 [[package]]
 name = "neura-nn"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff53b49b8730621acac2397b3fec7b3c0546d274701b2207b1bfa118e728e487"
+checksum = "8b0fa4b3925c2f4c985826e9128b52bee879bf6f5fcb124f794dd633b35f8ec2"
 dependencies = [
  "neura-abi",
  "neura-graph",
@@ -3524,9 +3524,9 @@ dependencies = [
 
 [[package]]
 name = "neura-plan"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "103078c7d2286209ffdac75dae89c3851208e668230c5495ca99383f26c7bb4e"
+checksum = "d7aded992d845b3e9b957bbe52fe19b2e8eaf43a1f50380d0a2d59dcf63c9d98"
 dependencies = [
  "bytemuck",
  "neura-abi",
@@ -3537,9 +3537,9 @@ dependencies = [
 
 [[package]]
 name = "neura-pointwise"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36bc121a681cc9a20ffd163092148f923dee9793a8754e620f772578c1fe4597"
+checksum = "fb58f295560c99266d897658976a5a241d4e5c160609fba7b6cfbc8694f7392f"
 dependencies = [
  "neura-abi",
  "neura-ast",
@@ -3548,9 +3548,9 @@ dependencies = [
 
 [[package]]
 name = "neura-precision"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ed42eb3b881af9ef727210d0d095f67a828410fb90ea632269460670926c2e2"
+checksum = "569a2f1f495566330adbcfff81cbe252f97da4d2e6bd93598d3f58e1d09ede9b"
 dependencies = [
  "bytemuck",
  "half",
@@ -3559,18 +3559,18 @@ dependencies = [
 
 [[package]]
 name = "neura-profile"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b0ac4c6536e9cdde2af4789f8417bd52e663959426170c8c1b2b8962f74ac80"
+checksum = "61afc78fa40f3925e4cc0ea9551e47b19836b27c21e82d06f9a0994e534ab55d"
 dependencies = [
  "neura-abi",
 ]
 
 [[package]]
 name = "neura-runtime"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b972e6119f8b366d6427ab511178ac7878dc496e91a9adf4c80253ce8a403cc"
+checksum = "a8a7f38f6c8a6eb8cd561a180a17c1f6cadfd49dbc25334048686e9b30726829"
 dependencies = [
  "bytemuck",
  "neura-abi",
@@ -3586,33 +3586,33 @@ dependencies = [
 
 [[package]]
 name = "neura-shader"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7979afe7a66830ffa8c004250fa9c87599256ed84479e13b6f69a8a0194e486c"
+checksum = "266d0bdbfe3358e01d1825633a51d19b6f39e53440b93e06917d37a77878f663"
 
 [[package]]
 name = "neura-source"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a14e6d2f4adb09bd0bf878f83374d04acb3b177389aad1fdce305351071b8fb6"
+checksum = "108649c62db33490608b7813c07c0da2711378ec5db5f59323f9ef92c9d097ea"
 dependencies = [
  "neura-abi",
 ]
 
 [[package]]
 name = "neura-template"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0feb10bb518c9293150fef9a36dc552b162eb76d96928aae7d6833e07c37650"
+checksum = "4b61462fd6393a7ed33bea9e04b3d06ece28b94dfea05813018fe75d44e73914"
 dependencies = [
  "neura-gguf",
 ]
 
 [[package]]
 name = "neura-tokenizer"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8887c86fba452ecdcbe45754192082a0a584067aed3f7b5ec623709d18e37fa"
+checksum = "a935f72767fdd1dd84383de93453938ade6b3b82ff4eedd843981b08cdfd0de0"
 dependencies = [
  "neura-gguf",
 ]

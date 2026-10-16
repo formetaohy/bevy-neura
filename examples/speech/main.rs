@@ -16,8 +16,8 @@ mod view;
 
 use bevy::prelude::*;
 use bevy::render::pipelined_rendering::PipelinedRenderingPlugin;
-use bevy_neura::{NeuraMemory, NeuraPlugin};
-use neura::MemoryRequest;
+use bevy_neura::NeuraPlugin;
+use neura::{MemoryRequest, RuntimeRequest};
 
 const DEVICE_HEAP: u64 = 1 << 30;
 const READBACK: u64 = 1 << 23;
@@ -43,15 +43,17 @@ fn main() {
                 })
                 .build()
                 .disable::<PipelinedRenderingPlugin>(),
-            NeuraPlugin,
+            NeuraPlugin::of(RuntimeRequest {
+                memory: MemoryRequest {
+                    heap_bytes: DEVICE_HEAP,
+                    readback_bytes: READBACK,
+                    readback_slots: 4,
+                    ..MemoryRequest::default()
+                },
+                ..RuntimeRequest::default()
+            }),
             common::LoadingPlugin::new(Phase::Loading, source::MODEL),
         ))
-        .insert_resource(NeuraMemory(MemoryRequest {
-            heap_bytes: DEVICE_HEAP,
-            readback_bytes: READBACK,
-            readback_slots: 4,
-            ..MemoryRequest::default()
-        }))
         .init_state::<Phase>()
         .add_message::<utterance::Utterance>()
         .add_systems(Startup, view::setup)

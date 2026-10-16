@@ -1,7 +1,6 @@
 use crate::extents::Extents;
-use crate::geometry::ModelGeometry;
 use crate::inputs::Inputs;
-use crate::role::Role;
+use crate::roles::Role;
 use crate::roles::Roles;
 use bevy::prelude::Component;
 use neura::{Checkpoint, Program, Readout, Run, Runtime, Value, Weights};
@@ -62,19 +61,8 @@ impl Model {
         runtime.restore(self.program.weights(), checkpoint);
     }
 
-    pub fn geometry(&self) -> ModelGeometry {
-        ModelGeometry {
-            tasks: self.program.task_count(),
-            waves: self.program.wave_count(),
-            workgroups: self.program.workgroups(),
-            tensors: self.program.tensor_bytes(),
-            weights: self.program.weights().bytes(),
-            arena: self.program.arena_bytes(),
-            device: self.program.device_bytes(),
-            updates: self.program.updates_weights(),
-            dynamic: self.program.dynamic(),
-            bounds: self.roles.bounds(),
-        }
+    pub fn bound(&self, role: Role) -> u32 {
+        self.roles.bound(role)
     }
 
     pub fn value(&self, role: Role) -> Value {

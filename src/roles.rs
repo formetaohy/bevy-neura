@@ -1,7 +1,8 @@
 use crate::extents::Extents;
-use crate::role::Role;
 use neura::{Free, Graph, Value};
 use neura_abi::NO_VALUE;
+
+pub type Role = &'static str;
 
 #[derive(Default)]
 pub struct Roles {
@@ -142,10 +143,11 @@ impl Roles {
         self.outputs.iter().map(|(_, value)| *value).collect()
     }
 
-    pub(crate) fn bounds(&self) -> Vec<(Role, u32)> {
+    pub(crate) fn bound(&self, role: Role) -> u32 {
         self.axes
             .iter()
-            .map(|(role, free)| (*role, free.bound()))
-            .collect()
+            .find(|(name, _)| *name == role)
+            .map(|(_, free)| free.bound())
+            .unwrap_or_else(|| panic!("the model holds no host extent under the role {role}"))
     }
 }

@@ -6,15 +6,21 @@ use bevy::render::pipelined_rendering::PipelinedRenderingPlugin;
 use bevy::render::settings::{RenderCreation, WgpuSettings};
 use bevy::window::WindowPlugin;
 use bevy::winit::WinitPlugin;
-use bevy_neura::{NeuraMemory, NeuraPlugin};
-use neura::MemoryRequest;
+use bevy_neura::NeuraPlugin;
+use neura::{MemoryRequest, RuntimeRequest};
 use std::sync::Mutex;
 
 pub fn app(memory: MemoryRequest) -> App {
-    assemble(memory, false)
+    assemble(
+        RuntimeRequest {
+            memory,
+            ..RuntimeRequest::default()
+        },
+        false,
+    )
 }
 
-pub(crate) fn assemble(memory: MemoryRequest, pipelined: bool) -> App {
+pub(crate) fn assemble(request: RuntimeRequest, pipelined: bool) -> App {
     static ONE_INSTANCE_AT_A_TIME: Mutex<()> = Mutex::new(());
     let _guard = ONE_INSTANCE_AT_A_TIME
         .lock()
@@ -37,8 +43,7 @@ pub(crate) fn assemble(memory: MemoryRequest, pipelined: bool) -> App {
     } else {
         plugins.disable::<PipelinedRenderingPlugin>()
     });
-    app.add_plugins(NeuraPlugin);
-    app.insert_resource(NeuraMemory(memory));
+    app.add_plugins(NeuraPlugin::of(request));
     while app.plugins_state() == PluginsState::Adding {
         bevy::tasks::tick_global_task_pools_on_main_thread();
     }

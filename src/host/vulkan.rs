@@ -1,7 +1,7 @@
-use super::{lent, request};
+use super::{borrowed, lent};
 use crate::runtime::NeuraRuntime;
 use neura::gpu::VulkanHost;
-use neura::{HostAdvance, HostDevice, HostIdentity, MemoryRequest, Runtime};
+use neura::{HostAdvance, HostDevice, HostIdentity, RuntimeRequest};
 use wgpu::Device;
 use wgpu::hal::vulkan;
 
@@ -27,13 +27,11 @@ pub(super) fn identity(device: &Device, native: &vulkan::Device) -> HostIdentity
 pub(super) fn borrow(
     device: &Device,
     native: &vulkan::Device,
-    memory: MemoryRequest,
+    request: RuntimeRequest,
     advance: Option<HostAdvance>,
 ) -> NeuraRuntime {
-    let host = lent(HostDevice::vulkan(host(device, native)), device, advance);
-    let identity = host.identity();
-    let runtime = Runtime::borrow(host, request(memory)).unwrap_or_else(|unavailable| {
-        panic!("the Vulkan device the App renders on cannot run Neura compute: {unavailable}")
-    });
-    NeuraRuntime::borrowed(device.clone(), runtime, identity)
+    borrowed(
+        lent(HostDevice::vulkan(host(device, native)), device, advance),
+        request,
+    )
 }

@@ -25,8 +25,8 @@ mod world;
 use bevy::camera::ScalingMode;
 use bevy::prelude::*;
 use bevy::render::pipelined_rendering::PipelinedRenderingPlugin;
-use bevy_neura::{NeuraMemory, NeuraPlugin};
-use neura::MemoryRequest;
+use bevy_neura::NeuraPlugin;
+use neura::{MemoryRequest, RuntimeRequest};
 
 const DEVICE_HEAP: u64 = 1 << 28;
 const READBACK: u64 = 1 << 22;
@@ -53,15 +53,17 @@ fn main() {
                 })
                 .build()
                 .disable::<PipelinedRenderingPlugin>(),
-            NeuraPlugin,
+            NeuraPlugin::of(RuntimeRequest {
+                memory: MemoryRequest {
+                    heap_bytes: DEVICE_HEAP,
+                    readback_bytes: READBACK,
+                    readback_slots: 4,
+                    ..MemoryRequest::default()
+                },
+                ..RuntimeRequest::default()
+            }),
             common::LoadingPlugin::new(Phase::Loading, "lunar lander - PPO on bevy-neura"),
         ))
-        .insert_resource(NeuraMemory(MemoryRequest {
-            heap_bytes: DEVICE_HEAP,
-            readback_bytes: READBACK,
-            readback_slots: 4,
-            ..MemoryRequest::default()
-        }))
         .init_state::<Phase>()
         .insert_resource(ClearColor(Color::srgb(0.01, 0.012, 0.03)))
         .add_systems(Startup, camera)

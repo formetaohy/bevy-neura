@@ -1,25 +1,19 @@
 mod extents;
-mod geometry;
 mod host;
 mod inputs;
-mod memory;
 mod model;
 mod plan;
 mod plugin;
 mod queue;
 mod rebuild;
-mod role;
 mod roles;
 mod runtime;
 
 pub use extents::Extents;
-pub use geometry::ModelGeometry;
 pub use inputs::Inputs;
-pub use memory::NeuraMemory;
 pub use model::Model;
 pub use plan::ModelPlan;
 pub use plugin::NeuraPlugin;
 pub use rebuild::NeuraRebuilt;
-pub use role::Role;
-pub use roles::Roles;
+pub use roles::{Role, Roles};
 pub use runtime::NeuraRuntime;

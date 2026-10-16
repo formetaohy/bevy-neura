@@ -1,6 +1,6 @@
-use super::{lent, request};
+use super::{borrowed, lent};
 use crate::runtime::NeuraRuntime;
-use neura::{HostAdvance, HostDevice, HostIdentity, MemoryRequest, Runtime};
+use neura::{HostAdvance, HostDevice, HostIdentity, RuntimeRequest};
 use wgpu::Device;
 use wgpu::hal::metal;
 
@@ -11,15 +11,11 @@ pub(super) fn identity(native: &metal::Device) -> HostIdentity {
 pub(super) fn borrow(
     device: &Device,
     native: &metal::Device,
-    memory: MemoryRequest,
+    request: RuntimeRequest,
     advance: Option<HostAdvance>,
 ) -> NeuraRuntime {
-    let runtime = Runtime::borrow(
+    borrowed(
         lent(HostDevice::metal(native.raw_device()), device, advance),
-        request(memory),
+        request,
     )
-    .unwrap_or_else(|unavailable| {
-        panic!("the Metal device the App renders on cannot run Neura compute: {unavailable}")
-    });
-    NeuraRuntime::borrowed(device.clone(), runtime)
 }

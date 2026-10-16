@@ -147,20 +147,23 @@ fn a_value_of_a_role_serves_the_raw_runtime() {
 }
 
 #[test]
-fn the_geometry_of_a_model_names_its_bounds() {
+fn a_model_answers_the_bound_of_an_axis_of_its_roles() {
     let mut app = common::app(MemoryRequest::default());
     app.update();
     let runtime = app.world().resource::<NeuraRuntime>();
     let model = affine().attach(runtime);
-    let geometry = model.geometry();
-    assert_eq!(geometry.bounds, vec![("batch", 8)]);
-    assert!(geometry.tasks > 0);
-    assert!(geometry.workgroups > 0);
-    assert!(geometry.tensors > 0);
-    assert!(geometry.dynamic);
-    assert!(!geometry.updates);
-    assert_eq!(model.program().task_count(), geometry.tasks);
+    assert_eq!(model.bound("batch"), 8);
     assert_eq!(model.weights().tensors(), 0);
+}
+
+#[test]
+#[should_panic(expected = "the model holds no host extent under the role rows")]
+fn an_axis_of_another_role_reaches_no_bound() {
+    let mut app = common::app(MemoryRequest::default());
+    app.update();
+    let runtime = app.world().resource::<NeuraRuntime>();
+    let model = affine().attach(runtime);
+    let _ = model.bound("rows");
 }
 
 #[test]
@@ -175,7 +178,7 @@ fn a_tuned_model_runs_the_values_it_compiled() {
             .input("observation", observation)
             .output("scaled", scaled)
     })
-    .attach_tuned(runtime);
+    .tune(runtime);
     model.run(
         runtime,
         &Inputs::new().write("observation", [1.0, -1.0, 2.0, 0.5]),
@@ -188,8 +191,7 @@ fn a_dropped_model_returns_its_storage_to_the_device_heap() {
     let mut roomy = common::app(MemoryRequest::default());
     roomy.update();
     let probe = dense().attach(roomy.world().resource::<NeuraRuntime>());
-    let geometry = probe.geometry();
-    let footprint = geometry.weights + geometry.tensors;
+    let footprint = probe.weights().bytes() + probe.program().tensor_bytes();
     drop(probe);
 
     let mut tight = common::app(MemoryRequest {

@@ -18,23 +18,18 @@ impl ModelPlan {
     pub fn attach(self, runtime: &Runtime) -> Model {
         let (graph, roles) = self.retained();
         let weights = runtime.weights(&graph);
-        let program = runtime.compile(&graph, &weights);
-        Model::of(roles, program)
+        Model::of(roles, runtime.compile(&graph, &weights))
     }
 
-    pub fn attach_tuned(self, runtime: &Runtime) -> Model {
+    pub fn tune(self, runtime: &Runtime) -> Model {
         let (graph, roles) = self.retained();
         let weights = runtime.weights(&graph);
-        let program = runtime.tune(&graph, &weights);
-        Model::of(roles, program)
+        Model::of(roles, runtime.tune(&graph, &weights))
     }
 
     pub fn share(self, runtime: &Runtime, source: &Model) -> Model {
         let (graph, roles) = self.retained();
-        let weights = source.weights().clone();
-        runtime.rebind(&weights, &graph);
-        let program = runtime.compile(&graph, &weights);
-        Model::of(roles, program)
+        Model::of(roles, runtime.compile(&graph, source.weights()))
     }
 
     fn retained(self) -> (Graph, Roles) {
