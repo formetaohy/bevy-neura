@@ -376,6 +376,7 @@ version = "0.7.4"
 dependencies = [
  "bevy",
  "cpal",
+ "flate2",
  "hound",
  "neura",
  "neura-abi",

@@ -39,6 +39,7 @@ debug-assertions = false
 [dev-dependencies]
 bevy = { version = "0.19.1", default-features = false, features = ["2d", "ui", "system_font_discovery"] }
 cpal = "0.18"
+flate2 = "1.1.10"
 hound = "3.5"
 rustfft = "6"
 safetensors = "0.8"
