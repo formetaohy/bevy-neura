@@ -12,7 +12,7 @@ const RIGHT: Color = Color::srgb(0.42, 0.85, 0.52);
 const WRONG: Color = Color::srgb(0.95, 0.42, 0.42);
 const PAPER: [f32; 3] = [0.95, 0.95, 0.92];
 const INK: [f32; 3] = [0.07, 0.08, 0.12];
-const HINT: &str = "write the answer in the box and the network reads it";
+const HINT: &str = "write the answer in the box";
 
 #[derive(Component)]
 pub struct CanvasNode;
@@ -165,7 +165,7 @@ pub fn paint(
                 let (held, shade) = match (game.reading(), game.verdict()) {
                     (Some(guess), Some(true)) => (
                         format!(
-                            "the network reads {} ({:.0}%) - right",
+                            "reads {} ({:.0}%) - right",
                             guess.digit,
                             guess.confidence * 100.0,
                         ),
@@ -173,7 +173,7 @@ pub fn paint(
                     ),
                     (Some(guess), Some(false)) => (
                         format!(
-                            "the network reads {} ({:.0}%) - wrong",
+                            "reads {} ({:.0}%) - wrong",
                             guess.digit,
                             guess.confidence * 100.0,
                         ),

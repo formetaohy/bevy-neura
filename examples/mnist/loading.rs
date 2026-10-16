@@ -9,10 +9,10 @@ use bevy::prelude::*;
 use bevy_neura::NeuraRuntime;
 
 const PLAN: [(&str, f32); 4] = [
-    ("downloading the digits", 0.16),
-    ("reading the digits", 0.02),
-    ("learning the digits", 0.79),
-    ("keeping the learning", 0.03),
+    ("downloading", 0.16),
+    ("unpacking", 0.02),
+    ("training", 0.79),
+    ("saving", 0.03),
 ];
 
 #[derive(Resource)]

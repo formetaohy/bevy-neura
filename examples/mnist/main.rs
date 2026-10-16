@@ -22,7 +22,7 @@ use bevy::render::pipelined_rendering::PipelinedRenderingPlugin;
 use bevy_neura::NeuraPlugin;
 use neura::{MemoryRequest, RuntimeRequest};
 
-const TITLE: &str = "mnist - write the answer - bevy-neura";
+const TITLE: &str = "mnist - bevy-neura";
 const DEVICE_HEAP: u64 = 1 << 28;
 const READBACK: u64 = 1 << 22;
 
