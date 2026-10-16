@@ -35,7 +35,7 @@ fn main() {
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        title: "speech - hold the button and talk - bevy-neura".to_string(),
+                        title: "speech".to_string(),
                         resolution: (660u32, 720u32).into(),
                         ..default()
                     }),

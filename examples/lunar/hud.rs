@@ -126,7 +126,7 @@ pub fn setup(mut commands: Commands, runtime: Res<NeuraRuntime>) {
     }
     commands.spawn((
         Line::Title,
-        Text::new("lunar lander - PPO on bevy-neura"),
+        Text::new("lunar lander"),
         text(20.0, INK),
         at(16.0, 12.0),
     ));
@@ -200,7 +200,7 @@ pub fn paint(
     let device = hud.device.clone();
     for (line, mut text, mut color) in &mut lines {
         let (drawn, ink) = match line {
-            Line::Title => ("lunar lander - PPO on bevy-neura".to_string(), INK),
+            Line::Title => ("lunar lander".to_string(), INK),
             Line::Device => (format!("[{}]", device), DIM),
             Line::Policy => ("policy of the showcase".to_string(), DIM),
             Line::Training => (

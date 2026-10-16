@@ -45,7 +45,7 @@ fn main() {
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        title: "lunar lander - PPO on bevy-neura".to_string(),
+                        title: "lunar lander".to_string(),
                         resolution: WINDOW.into(),
                         ..default()
                     }),
@@ -62,7 +62,7 @@ fn main() {
                 },
                 ..RuntimeRequest::default()
             }),
-            common::LoadingPlugin::new(Phase::Loading, "lunar lander - PPO on bevy-neura"),
+            common::LoadingPlugin::new(Phase::Loading, "lunar lander"),
         ))
         .init_state::<Phase>()
         .insert_resource(ClearColor(Color::srgb(0.01, 0.012, 0.03)))
