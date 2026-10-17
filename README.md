@@ -28,6 +28,13 @@
       Live speech transcription
     </td>
   </tr>
+  <tr>
+    <td align="center" valign="top" colspan="2">
+      <a href="examples/tictactoe/README.md"><img src="docs/assets/tictactoe.gif" width="308" alt="tictactoe example"></a><br>
+      <a href="examples/tictactoe/README.md"><strong>tictactoe</strong></a><br>
+      Play against the trained AI
+    </td>
+  </tr>
 </table>
 
 ## What is bevy-neura?
