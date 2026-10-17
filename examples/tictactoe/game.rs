@@ -1,13 +1,11 @@
 use crate::board::{Board, Ending};
-use crate::results::{Record, Results};
+use crate::results::Results;
 use crate::training::Training;
 use bevy::prelude::*;
 use bevy_neura::NeuraRuntime;
 
 const THINK: f32 = 0.35;
 const HOLD: f32 = 2.2;
-const SHOW_MOVE: f32 = 0.12;
-const SHOW_HOLD: f32 = 0.5;
 const FINISH_HOLD: f32 = 2.0;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -35,7 +33,6 @@ pub struct Game {
     stage: Stage,
     timer: f32,
     finishing: f32,
-    showcase: Option<Record>,
 }
 
 impl Game {
@@ -46,7 +43,6 @@ impl Game {
             stage: Stage::Learning,
             timer: 0.0,
             finishing: 0.0,
-            showcase: None,
         }
     }
 
@@ -64,14 +60,6 @@ impl Game {
 
     pub fn results(&self) -> &Results {
         self.training.results()
-    }
-
-    pub fn showcase(&self) -> Option<Record> {
-        self.showcase
-    }
-
-    pub fn trained(&self) -> bool {
-        self.training.done()
     }
 
     pub fn click(&mut self, at: usize) {
@@ -117,37 +105,16 @@ impl Game {
 
     fn learn(&mut self, runtime: &NeuraRuntime, elapsed: f32) {
         self.training.advance(runtime);
-        if self.training.done() {
-            self.board = Board::start();
-            self.showcase = None;
-            self.finishing += elapsed;
-            if self.finishing >= FINISH_HOLD {
-                self.stage = Stage::Human;
-                self.finishing = 0.0;
-                self.timer = 0.0;
-            }
+        if !self.training.done() {
             return;
         }
-        self.timer += elapsed;
-        if self.showcase.is_some() {
-            if self.timer >= SHOW_HOLD {
-                self.board = Board::start();
-                self.showcase = None;
-                self.timer = 0.0;
-            }
-            return;
+        self.board = Board::start();
+        self.finishing += elapsed;
+        if self.finishing >= FINISH_HOLD {
+            self.stage = Stage::Human;
+            self.finishing = 0.0;
+            self.timer = 0.0;
         }
-        if self.timer < SHOW_MOVE {
-            return;
-        }
-        let action = self.training.choose(runtime, &self.board);
-        if let Some(ending) = self.board.play(action) {
-            self.showcase = Some(Record {
-                ending,
-                moves: self.board.moves(),
-            });
-        }
-        self.timer = 0.0;
     }
 }
 

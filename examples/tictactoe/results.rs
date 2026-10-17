@@ -1,8 +1,6 @@
 use crate::board::Ending;
-use std::collections::VecDeque;
 
-pub const CHUNK: u32 = 1_000;
-pub const RECENT: usize = 128;
+pub const CHUNK: u32 = 6_000;
 const SHORTEST: u32 = 5;
 const LONGEST: u32 = 9;
 
@@ -23,12 +21,6 @@ impl Chunk {
     }
 }
 
-#[derive(Clone, Copy)]
-pub struct Record {
-    pub ending: Ending,
-    pub moves: u32,
-}
-
 pub struct Results {
     total: u32,
     completed: u32,
@@ -36,7 +28,6 @@ pub struct Results {
     o_wins: u32,
     draws: u32,
     chunks: Vec<Chunk>,
-    recent: VecDeque<Record>,
     moves: u64,
 }
 
@@ -50,7 +41,6 @@ impl Results {
             o_wins: 0,
             draws: 0,
             chunks: vec![Chunk::default(); total.div_ceil(CHUNK) as usize],
-            recent: VecDeque::with_capacity(RECENT),
             moves: 0,
         }
     }
@@ -82,10 +72,6 @@ impl Results {
         }
         self.moves += u64::from(moves);
         self.completed += 1;
-        if self.recent.len() == RECENT {
-            self.recent.pop_front();
-        }
-        self.recent.push_back(Record { ending, moves });
     }
 
     pub fn completed(&self) -> u32 {
@@ -110,10 +96,6 @@ impl Results {
 
     pub fn chunks(&self) -> &[Chunk] {
         &self.chunks
-    }
-
-    pub fn recent(&self) -> &VecDeque<Record> {
-        &self.recent
     }
 
     pub fn average_moves(&self) -> f32 {

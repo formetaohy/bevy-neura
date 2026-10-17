@@ -1,6 +1,6 @@
 use crate::board::Ending;
 use crate::game::{Cell, Game, Stage, Verdict};
-use crate::results::{CHUNK, RECENT, Results};
+use crate::results::{CHUNK, Results};
 use crate::training::TOTAL_GAMES;
 use bevy::picking::Pickable;
 use bevy::prelude::*;
@@ -13,10 +13,10 @@ const TILE: f32 = 104.0;
 const GAP: f32 = 8.0;
 const BOARD: f32 = 3.0 * TILE + 2.0 * GAP;
 const PANEL: f32 = 408.0;
+const PANEL_HEIGHT: f32 = 390.0;
 const CONTENT: f32 = 384.0;
-const CHART: f32 = 54.0;
-const RECENT_STRIP: f32 = 20.0;
-const REFRESH: f32 = 0.1;
+const CHART: f32 = 150.0;
+const REFRESH: f32 = 0.2;
 const CELL_COLOR: Color = Color::srgb(0.07, 0.09, 0.14);
 const HOVER_COLOR: Color = Color::srgb(0.11, 0.14, 0.21);
 const PRESS_COLOR: Color = Color::srgb(0.16, 0.21, 0.31);
@@ -34,6 +34,9 @@ pub(crate) struct Mark(usize);
 pub(crate) struct Status;
 
 #[derive(Component)]
+pub(crate) struct BoardPanel;
+
+#[derive(Component)]
 pub(crate) struct Dashboard;
 
 #[derive(Component)]
@@ -47,7 +50,6 @@ pub(crate) enum Reading {
     Count,
     Percent,
     Total(Ending),
-    Latest,
     Average,
 }
 
@@ -57,9 +59,6 @@ pub(crate) struct ChunkBar {
     ending: Ending,
 }
 
-#[derive(Component)]
-pub(crate) struct Recent(usize);
-
 type PanelNodes<'w, 's> = Query<
     'w,
     's,
@@ -68,15 +67,9 @@ type PanelNodes<'w, 's> = Query<
         Option<&'static Dashboard>,
         Option<&'static ProgressFill>,
         Option<&'static ChunkBar>,
-        Option<&'static Recent>,
         &'static mut BackgroundColor,
     ),
-    Or<(
-        With<Dashboard>,
-        With<ProgressFill>,
-        With<ChunkBar>,
-        With<Recent>,
-    )>,
+    Or<(With<Dashboard>, With<ProgressFill>, With<ChunkBar>)>,
 >;
 
 type StatusText<'w, 's> =
@@ -106,10 +99,12 @@ pub fn setup(mut commands: Commands) {
                 ))
                 .with_children(|row| {
                     row.spawn((
+                        BoardPanel,
                         Node {
                             width: Val::Px(BOARD),
                             height: Val::Auto,
                             align_self: AlignSelf::Center,
+                            display: Display::None,
                             flex_direction: FlexDirection::Column,
                             align_items: AlignItems::Center,
                             row_gap: Val::Px(10.0),
@@ -162,17 +157,17 @@ pub fn setup(mut commands: Commands) {
                                     });
                             }
                         });
-                        left.spawn((Status, Text::new("showcase"), ui::text(17.0, DIM)));
+                        left.spawn((Status, Text::new("your move"), ui::text(17.0, DIM)));
                     });
                     row.spawn((
                         Dashboard,
                         Node {
                             width: Val::Px(PANEL),
-                            height: Val::Px(300.0),
+                            height: Val::Px(PANEL_HEIGHT),
                             align_self: AlignSelf::Center,
                             padding: UiRect::all(Val::Px(12.0)),
                             flex_direction: FlexDirection::Column,
-                            row_gap: Val::Px(10.0),
+                            row_gap: Val::Px(8.0),
                             border_radius: BorderRadius::all(Val::Px(14.0)),
                             ..default()
                         },
@@ -180,7 +175,7 @@ pub fn setup(mut commands: Commands) {
                         Pickable::IGNORE,
                     ))
                     .with_children(|panel| {
-                        panel.spawn((Text::new("self-play"), ui::text(13.0, DIM)));
+                        panel.spawn((Text::new("self-play games"), ui::text(12.0, DIM)));
                         panel
                             .spawn((
                                 Node {
@@ -226,71 +221,23 @@ pub fn setup(mut commands: Commands) {
                             .spawn((
                                 Node {
                                     width: Val::Percent(100.0),
-                                    justify_content: JustifyContent::SpaceBetween,
-                                    align_items: AlignItems::Center,
+                                    flex_direction: FlexDirection::Column,
+                                    row_gap: Val::Px(2.0),
                                     ..default()
                                 },
                                 Pickable::IGNORE,
                             ))
-                            .with_children(|line| {
-                                line.spawn((
-                                    Readout(Reading::Total(Ending::XWins)),
-                                    Text::new("X 0 0%"),
-                                    ui::text(13.0, PLAYER),
-                                ));
-                                line.spawn((
-                                    Readout(Reading::Total(Ending::OWins)),
-                                    Text::new("O 0 0%"),
-                                    ui::text(13.0, COMPUTER),
-                                ));
-                                line.spawn((
-                                    Readout(Reading::Total(Ending::Draw)),
-                                    Text::new("draw 0 0%"),
-                                    ui::text(13.0, DRAW),
-                                ));
-                            });
-                        panel.spawn((Text::new("results per 1,000 games"), ui::text(12.0, DIM)));
-                        panel
-                            .spawn((
-                                Node {
-                                    width: Val::Px(CONTENT),
-                                    height: Val::Px(CHART),
-                                    flex_direction: FlexDirection::Row,
-                                    column_gap: Val::Px(1.0),
-                                    align_items: AlignItems::Stretch,
-                                    ..default()
-                                },
-                                Pickable::IGNORE,
-                            ))
-                            .with_children(|chart| {
-                                let chunks = TOTAL_GAMES.div_ceil(CHUNK) as usize;
-                                for chunk in 0..chunks {
-                                    chart
-                                        .spawn((
-                                            Node {
-                                                width: Val::Px(3.0),
-                                                height: Val::Percent(100.0),
-                                                flex_direction: FlexDirection::Column,
-                                                justify_content: JustifyContent::FlexEnd,
-                                                ..default()
-                                            },
-                                            BackgroundColor(TRACK),
-                                        ))
-                                        .with_children(|column| {
-                                            for ending in
-                                                [Ending::OWins, Ending::Draw, Ending::XWins]
-                                            {
-                                                column.spawn((
-                                                    ChunkBar { chunk, ending },
-                                                    Node {
-                                                        width: Val::Percent(100.0),
-                                                        height: Val::Px(0.0),
-                                                        ..default()
-                                                    },
-                                                    BackgroundColor(shade(ending)),
-                                                ));
-                                            }
-                                        });
+                            .with_children(|totals| {
+                                for (ending, label) in [
+                                    (Ending::XWins, "X wins 0 (0%)"),
+                                    (Ending::OWins, "O wins 0 (0%)"),
+                                    (Ending::Draw, "draws 0 (0%)"),
+                                ] {
+                                    totals.spawn((
+                                        Readout(Reading::Total(ending)),
+                                        Text::new(label),
+                                        ui::text(13.0, shade(ending)),
+                                    ));
                                 }
                             });
                         panel
@@ -305,44 +252,72 @@ pub fn setup(mut commands: Commands) {
                             ))
                             .with_children(|line| {
                                 line.spawn((
-                                    Text::new("recent 128 games | height = moves"),
+                                    Text::new("results per 6,000 games"),
                                     ui::text(12.0, DIM),
                                 ));
                                 line.spawn((
-                                    Readout(Reading::Average),
-                                    Text::new("avg 0.0 moves"),
-                                    ui::text(12.0, DIM),
+                                    Node {
+                                        flex_direction: FlexDirection::Row,
+                                        column_gap: Val::Px(6.0),
+                                        ..default()
+                                    },
+                                    Pickable::IGNORE,
+                                    children![
+                                        (Text::new("X wins"), ui::text(12.0, PLAYER)),
+                                        (Text::new("O wins"), ui::text(12.0, COMPUTER)),
+                                        (Text::new("draws"), ui::text(12.0, DRAW)),
+                                    ],
                                 ));
                             });
-                        panel.spawn((
-                            Readout(Reading::Latest),
-                            Text::new("latest: none"),
-                            ui::text(12.0, DIM),
-                        ));
                         panel
                             .spawn((
                                 Node {
                                     width: Val::Px(CONTENT),
-                                    height: Val::Px(RECENT_STRIP),
+                                    height: Val::Px(CHART),
                                     flex_direction: FlexDirection::Row,
-                                    align_items: AlignItems::FlexEnd,
+                                    column_gap: Val::Px(1.0),
+                                    align_items: AlignItems::Stretch,
                                     ..default()
                                 },
                                 Pickable::IGNORE,
                             ))
-                            .with_children(|strip| {
-                                for index in 0..RECENT {
-                                    strip.spawn((
-                                        Recent(index),
-                                        Node {
-                                            width: Val::Px(3.0),
-                                            height: Val::Px(0.0),
-                                            ..default()
-                                        },
-                                        BackgroundColor(TRACK),
-                                    ));
+                            .with_children(|chart| {
+                                let bars = TOTAL_GAMES.div_ceil(CHUNK) as usize;
+                                let width = (CONTENT - bars.saturating_sub(1) as f32) / bars as f32;
+                                for chunk in 0..bars {
+                                    chart
+                                        .spawn((
+                                            Node {
+                                                width: Val::Px(width),
+                                                height: Val::Percent(100.0),
+                                                flex_direction: FlexDirection::Column,
+                                                justify_content: JustifyContent::FlexEnd,
+                                                ..default()
+                                            },
+                                            BackgroundColor(TRACK),
+                                        ))
+                                        .with_children(|column| {
+                                            for ending in
+                                                [Ending::Draw, Ending::OWins, Ending::XWins]
+                                            {
+                                                column.spawn((
+                                                    ChunkBar { chunk, ending },
+                                                    Node {
+                                                        width: Val::Percent(100.0),
+                                                        height: Val::Px(0.0),
+                                                        ..default()
+                                                    },
+                                                    BackgroundColor(shade(ending)),
+                                                ));
+                                            }
+                                        });
                                 }
                             });
+                        panel.spawn((
+                            Readout(Reading::Average),
+                            Text::new("average 0.0 moves"),
+                            ui::text(12.0, DIM),
+                        ));
                     });
                 });
         });
@@ -360,7 +335,19 @@ pub fn paint_board(
     )>,
     mut marks: Query<(&Mark, &mut Text, &mut TextColor), Without<Status>>,
     mut status: StatusText,
+    mut board_panel: Query<&mut Node, With<BoardPanel>>,
 ) {
+    let learning = game.stage() == Stage::Learning;
+    for mut node in &mut board_panel {
+        let display = if learning {
+            Display::None
+        } else {
+            Display::Flex
+        };
+        if node.display != display {
+            node.display = display;
+        }
+    }
     let board = game.board().cells();
     let human = game.stage() == Stage::Human;
     for (entity, cell, interaction, mut background, disabled) in &mut cells {
@@ -395,19 +382,7 @@ pub fn paint_board(
         }
     }
     let (held, shade) = match game.stage() {
-        Stage::Learning => {
-            if game.trained() {
-                ("training complete".to_string(), GOOD)
-            } else {
-                match game.showcase() {
-                    Some(record) => (
-                        format!("{} in {} moves", ending_words(record.ending), record.moves),
-                        shade(record.ending),
-                    ),
-                    None => ("showcase".to_string(), DIM),
-                }
-            }
-        }
+        Stage::Learning => ("training".to_string(), DIM),
         Stage::Done(Verdict::Win) => ("you win".to_string(), GOOD),
         Stage::Done(Verdict::Draw) => ("draw".to_string(), TITLE),
         Stage::Done(Verdict::Loss) => ("you lose".to_string(), BAD),
@@ -432,7 +407,7 @@ pub fn paint_dashboard(
     mut readouts: Query<(&Readout, &mut Text, &mut TextColor)>,
 ) {
     let learning = game.stage() == Stage::Learning;
-    for (mut node, dashboard, _, _, _, _) in &mut panels {
+    for (mut node, dashboard, _, _, _) in &mut panels {
         if dashboard.is_some() {
             let display = if learning {
                 Display::Flex
@@ -471,26 +446,15 @@ pub fn paint_dashboard(
                 let count = count(results, ending);
                 (
                     format!(
-                        "{} {} {}%",
-                        ending_text(ending),
+                        "{} {} ({}%)",
+                        ending_label(ending),
                         grouped(count),
                         share(count, results.completed())
                     ),
                     shade(ending),
                 )
             }
-            Reading::Latest => match results.recent().back() {
-                Some(record) => (
-                    format!(
-                        "latest: {}, {} moves",
-                        ending_words(record.ending),
-                        record.moves
-                    ),
-                    shade(record.ending),
-                ),
-                None => ("latest: none".to_string(), DIM),
-            },
-            Reading::Average => (format!("avg {:.1} moves", results.average_moves()), DIM),
+            Reading::Average => (format!("average {:.1} moves", results.average_moves()), DIM),
         };
         if text.0 != held {
             text.0 = held;
@@ -499,7 +463,7 @@ pub fn paint_dashboard(
             colour.0 = shade;
         }
     }
-    for (mut node, _, fill, chunk, recent, mut colour) in &mut panels {
+    for (mut node, _, fill, chunk, _) in &mut panels {
         if fill.is_some() {
             node.width = Val::Px(CONTENT * game.progress());
             continue;
@@ -507,19 +471,6 @@ pub fn paint_dashboard(
         if let Some(bar) = chunk {
             let count = results.chunks()[bar.chunk].count(bar.ending);
             node.height = Val::Percent(count as f32 / CHUNK as f32 * 100.0);
-            continue;
-        }
-        if let Some(tile) = recent {
-            match results.recent().get(tile.0) {
-                Some(record) => {
-                    node.height = Val::Px(6.0 + f32::from((record.moves - 5) as u8) * 3.0);
-                    colour.0 = shade(record.ending);
-                }
-                None => {
-                    node.height = Val::Px(0.0);
-                    colour.0 = TRACK;
-                }
-            }
         }
     }
 }
@@ -539,19 +490,11 @@ fn share(count: u32, total: u32) -> u32 {
     (u64::from(count) * 100 / u64::from(total)) as u32
 }
 
-fn ending_text(ending: Ending) -> &'static str {
-    match ending {
-        Ending::XWins => "X",
-        Ending::OWins => "O",
-        Ending::Draw => "draw",
-    }
-}
-
-fn ending_words(ending: Ending) -> &'static str {
+fn ending_label(ending: Ending) -> &'static str {
     match ending {
         Ending::XWins => "X wins",
         Ending::OWins => "O wins",
-        Ending::Draw => "draw",
+        Ending::Draw => "draws",
     }
 }
 

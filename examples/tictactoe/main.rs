@@ -17,7 +17,7 @@ use bevy_neura_example::stage;
 const TITLE: &str = "tic tac toe";
 const DEVICE_HEAP: u64 = 1 << 28;
 const READBACK: u64 = 1 << 20;
-const WINDOW: (u32, u32) = (800, 480);
+const WINDOW: (u32, u32) = (480, 500);
 
 fn main() {
     App::new()
