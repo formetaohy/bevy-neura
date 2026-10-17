@@ -23,7 +23,7 @@ jobs:
       - name: Match the tag against the workspace version
         run: |
           version="${GITHUB_REF_NAME#v}"
-          versions=$(cargo metadata --no-deps --format-version 1 | jq -r '[.packages[].version] | unique | join(" ")')
+          versions=$(cargo metadata --no-deps --format-version 1 | jq -r '[.packages[] | select(.publish != []) | .version] | unique | join(" ")')
           if [ "$versions" != "$version" ]; then
             echo "tag $GITHUB_REF_NAME does not match workspace versions: $versions" >&2
             exit 1

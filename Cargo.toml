@@ -3,7 +3,7 @@ resolver = "3"
 members = [".", "examples/common"]
 
 [workspace.package]
-version = "0.7.4"
+version = "0.7.5"
 edition = "2024"
 description = "Neura integration for Bevy"
 license = "MIT"
@@ -23,6 +23,7 @@ edition.workspace = true
 description.workspace = true
 license.workspace = true
 repository.workspace = true
+exclude = ["docs/assets/*.gif"]
 
 [dependencies]
 bevy = { version = "0.19.1", default-features = false, features = ["std", "multi_threaded", "bevy_render"] }
