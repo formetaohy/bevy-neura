@@ -11,10 +11,6 @@ pub const VALUE_ROLE: Role = "value";
 pub const LOG_PROBABILITY_ROLE: Role = "log_probability";
 pub const ADVANTAGE_ROLE: Role = "advantage";
 pub const RETURN_ROLE: Role = "return";
-pub const POLICY_LOSS_ROLE: Role = "policy_loss";
-pub const VALUE_LOSS_ROLE: Role = "value_loss";
-pub const ENTROPY_ROLE: Role = "entropy";
-pub const LOSS_ROLE: Role = "loss";
 const ROWS_ROLE: Role = "rows";
 
 pub const ACTIONS: usize = Action::ALL.len();
@@ -27,7 +23,6 @@ pub struct Sample {
 
 pub struct Guess {
     pub action: Action,
-    pub value: f32,
     pub logits: [f32; ACTIONS],
 }
 
@@ -127,16 +122,15 @@ impl Greedy {
         let model = ModelPlan::build(|graph| {
             let net = Net::build(graph);
             let observation = graph.input(Shape::matrix(1, OBSERVATION as u32), Element::Single);
-            let (logits, value) = net.forward(graph, observation);
+            let (logits, _) = net.forward(graph, observation);
             let action = graph.argmax(logits);
-            for output in [action, value, logits] {
+            for output in [action, logits] {
                 graph.retain(output);
             }
             Roles::new()
                 .input(OBSERVATION_ROLE, observation)
                 .output(ACTION_ROLE, action)
                 .output(LOGITS_ROLE, logits)
-                .output(VALUE_ROLE, value)
         })
         .share(runtime, source);
         Self { model }
@@ -147,17 +141,15 @@ impl Greedy {
             .run(runtime, &Inputs::new().write(OBSERVATION_ROLE, observation));
         let mut read = self
             .model
-            .pull(runtime, &[ACTION_ROLE, LOGITS_ROLE, VALUE_ROLE])
+            .pull(runtime, &[ACTION_ROLE, LOGITS_ROLE])
             .collect()
             .into_iter();
         let action = read.next().expect("a policy answers the action it prefers");
         let logits = read
             .next()
             .expect("a policy answers the score of every action");
-        let value = read.next().expect("a critic answers the worth of a state");
         Guess {
             action: Action::of(action[0] as usize),
-            value: value[0],
             logits: logits.try_into().unwrap_or_else(|logits: Vec<f32>| {
                 panic!(
                     "a policy of {ACTIONS} actions scores {} of them",

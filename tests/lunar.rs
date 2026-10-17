@@ -240,22 +240,21 @@ fn a_rollout_carries_a_reward_back_to_its_landing() {
     }
     assert!(rollout.full());
     rollout.finish(&vec![0.0; rollout::ENVS as usize], 1.0, 1.0);
-    let targets = rollout.targets();
+    let mut batch = rollout::Batch::default();
+    rollout.gather(&mut batch, rollout.order());
     for step in 0..rollout::STEPS as usize {
         let row = step * rollout::ENVS as usize;
         assert_eq!(
-            targets[row], 1.0,
+            batch.targets[row], 1.0,
             "the reward of the last step reaches step {step} as {}",
-            targets[row],
+            batch.targets[row],
         );
         assert_eq!(
-            targets[row + 1],
+            batch.targets[row + 1],
             0.0,
             "a reward of one aim spreads sideways"
         );
     }
-    let mut batch = rollout::Batch::default();
-    rollout.gather(&mut batch, rollout.order());
     let sum = batch.advantages.iter().sum::<f32>();
     assert!(
         sum.abs() < 1e-3,
@@ -314,8 +313,7 @@ fn build(runtime: Res<NeuraRuntime>, mut commands: Commands) {
 #[test]
 fn the_training_lifts_the_policy_of_the_lander() {
     let mut app = common::app(MemoryRequest::default());
-    app.init_resource::<Time>()
-        .add_systems(Startup, build)
+    app.add_systems(Startup, build)
         .add_systems(Update, train::advance);
     app.update();
     let runtime = app.world().resource::<NeuraRuntime>().clone();
@@ -338,7 +336,11 @@ fn the_training_lifts_the_policy_of_the_lander() {
     );
     let greedy = policy::Greedy::share(&runtime, training.model());
     let guess = greedy.choose(&runtime, &[0.0; OBSERVATION]);
-    assert!(guess.value.is_finite());
+    assert!(
+        guess.logits.iter().all(|logit| logit.is_finite()),
+        "a policy of a trained lander scores {:?}",
+        guess.logits,
+    );
 }
 
 #[test]

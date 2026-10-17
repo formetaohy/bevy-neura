@@ -176,12 +176,4 @@ impl Rollout {
             batch.log_probabilities.push(self.log_probabilities[at]);
         }
     }
-
-    pub fn values(&self) -> &[f32] {
-        &self.values
-    }
-
-    pub fn targets(&self) -> &[f32] {
-        &self.targets
-    }
 }

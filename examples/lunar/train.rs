@@ -1,11 +1,10 @@
 use crate::env::{Action, Lander, OBSERVATION};
-use crate::learner::{Diagnostics, GAMMA, LAMBDA, Learner};
+use crate::learner::{GAMMA, LAMBDA, Learner};
 use crate::policy::Sampler;
 use crate::rollout::{ENVS, Record, Rollout};
 use bevy::prelude::*;
 use bevy_neura::NeuraRuntime;
 use bevy_neura_example::random::Random;
-use std::time::Duration;
 
 const SEED: u64 = 0x5eed_0001;
 const HISTORY: usize = 128;
@@ -28,12 +27,6 @@ pub struct Training {
     pub best: f32,
     pub episodes: u64,
     pub samples: u64,
-    pub updates: u64,
-    pub diagnostics: Diagnostics,
-    pub explained: f32,
-    clock: Duration,
-    measured: u64,
-    pub steps_per_second: f32,
 }
 
 impl Training {
@@ -56,12 +49,6 @@ impl Training {
             best: f32::MIN,
             episodes: 0,
             samples: 0,
-            updates: 0,
-            diagnostics: Diagnostics::default(),
-            explained: 0.0,
-            clock: Duration::ZERO,
-            measured: 0,
-            steps_per_second: 0.0,
         }
     }
 
@@ -76,16 +63,9 @@ impl Training {
         self.recent.iter().sum::<f32>() / self.recent.len() as f32
     }
 
-    pub fn advance(&mut self, runtime: &NeuraRuntime, elapsed: Duration) {
-        self.clock += elapsed;
+    pub fn advance(&mut self, runtime: &NeuraRuntime) {
         for _ in 0..self.steps {
             self.vector_step(runtime);
-        }
-        if self.clock >= Duration::from_millis(500) {
-            self.steps_per_second =
-                (self.samples - self.measured) as f32 / self.clock.as_secs_f32();
-            self.measured = self.samples;
-            self.clock = Duration::ZERO;
         }
     }
 
@@ -141,11 +121,8 @@ impl Training {
         let seed = f32::from_bits(self.random.bits());
         let last = self.sampler.value(runtime, &self.plane, seed);
         self.rollout.finish(&last, GAMMA, LAMBDA);
-        self.explained = explained(self.rollout.values(), self.rollout.targets());
-        self.diagnostics = self
-            .learner
+        self.learner
             .update(runtime, &mut self.rollout, &mut self.random);
-        self.updates += 1;
         self.rollout.clear();
     }
 
@@ -163,26 +140,6 @@ impl Training {
     }
 }
 
-fn explained(values: &[f32], targets: &[f32]) -> f32 {
-    let count = targets.len() as f32;
-    let mean = targets.iter().sum::<f32>() / count;
-    let variance = targets
-        .iter()
-        .map(|target| (target - mean).powi(2))
-        .sum::<f32>()
-        / count;
-    let error = values
-        .iter()
-        .zip(targets)
-        .map(|(value, target)| (value - target).powi(2))
-        .sum::<f32>()
-        / count;
-    if variance < 1e-6 {
-        return 0.0;
-    }
-    1.0 - error / variance
-}
-
-pub fn advance(time: Res<Time>, runtime: Res<NeuraRuntime>, mut training: ResMut<Training>) {
-    training.advance(&runtime, time.delta());
+pub fn advance(runtime: Res<NeuraRuntime>, mut training: ResMut<Training>) {
+    training.advance(&runtime);
 }

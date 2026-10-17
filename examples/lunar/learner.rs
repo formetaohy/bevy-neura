@@ -1,8 +1,7 @@
 use crate::env::OBSERVATION;
 use crate::net::Net;
 use crate::policy::{
-    ACTION_ROLE, ACTIONS, ADVANTAGE_ROLE, ENTROPY_ROLE, LOG_PROBABILITY_ROLE, LOSS_ROLE,
-    OBSERVATION_ROLE, POLICY_LOSS_ROLE, RETURN_ROLE, VALUE_LOSS_ROLE,
+    ACTION_ROLE, ACTIONS, ADVANTAGE_ROLE, LOG_PROBABILITY_ROLE, OBSERVATION_ROLE, RETURN_ROLE,
 };
 use crate::rollout::{Batch, ROWS, Rollout};
 use bevy_neura::{Extents, Inputs, Model, ModelPlan, NeuraRuntime, Role, Roles};
@@ -19,14 +18,6 @@ const VALUE_COEF: f32 = 0.5;
 const ENTROPY_COEF: f32 = 0.01;
 const ROWS_ROLE: Role = "rows";
 const ROW_AXIS: u32 = 2;
-
-#[derive(Clone, Copy, Default)]
-pub struct Diagnostics {
-    pub loss: f32,
-    pub policy: f32,
-    pub value: f32,
-    pub entropy: f32,
-}
 
 pub struct Learner {
     model: Model,
@@ -82,9 +73,6 @@ impl Learner {
                 let mut optimizer = AdamW::new(graph, "optimizer", RATE, 0.9, 0.999, 1e-8, 0.0);
                 optimizer.track_all(graph, &net.parameters());
                 optimizer.step(graph, &gradients);
-                for output in [loss, policy, value_loss, entropy] {
-                    graph.retain(output);
-                }
                 Roles::new()
                     .axis(ROWS_ROLE, rows)
                     .input(OBSERVATION_ROLE, observation)
@@ -92,10 +80,6 @@ impl Learner {
                     .input(ADVANTAGE_ROLE, advantage)
                     .input(RETURN_ROLE, target)
                     .input(LOG_PROBABILITY_ROLE, behaviour)
-                    .output(LOSS_ROLE, loss)
-                    .output(POLICY_LOSS_ROLE, policy)
-                    .output(VALUE_LOSS_ROLE, value_loss)
-                    .output(ENTROPY_ROLE, entropy)
             })
             .attach(runtime),
             batch: Batch::default(),
@@ -106,16 +90,10 @@ impl Learner {
         &self.model
     }
 
-    pub fn update(
-        &mut self,
-        runtime: &NeuraRuntime,
-        rollout: &mut Rollout,
-        random: &mut Random,
-    ) -> Diagnostics {
+    pub fn update(&mut self, runtime: &NeuraRuntime, rollout: &mut Rollout, random: &mut Random) {
         let minibatches = ROWS / MINIBATCH;
         self.model
             .bind(runtime, &Extents::new().axis(ROWS_ROLE, MINIBATCH));
-        let (mut total, mut taken) = (Diagnostics::default(), 0.0);
         for _ in 0..EPOCHS {
             rollout.shuffle(random);
             for index in 0..minibatches {
@@ -134,29 +112,7 @@ impl Learner {
                             self.batch.log_probabilities.as_slice(),
                         ),
                 );
-                let read = self
-                    .model
-                    .read_all(runtime)
-                    .into_iter()
-                    .collect::<std::collections::HashMap<Role, Vec<f32>>>();
-                total.loss += read.get(LOSS_ROLE).expect("a step answers its loss")[0];
-                total.policy += read
-                    .get(POLICY_LOSS_ROLE)
-                    .expect("a step answers its policy loss")[0];
-                total.value += read
-                    .get(VALUE_LOSS_ROLE)
-                    .expect("a step answers its value loss")[0];
-                total.entropy += read
-                    .get(ENTROPY_ROLE)
-                    .expect("a step answers the entropy it keeps")[0];
-                taken += 1.0;
             }
-        }
-        Diagnostics {
-            loss: total.loss / taken,
-            policy: total.policy / taken,
-            value: total.value / taken,
-            entropy: total.entropy / taken,
         }
     }
 }

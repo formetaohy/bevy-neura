@@ -3,7 +3,6 @@ use crate::env::{Action, Ending};
 use crate::policy::ACTIONS;
 use crate::train::Training;
 use bevy::prelude::*;
-use bevy_neura::NeuraRuntime;
 use bevy_neura_example::probability::softmax;
 use bevy_neura_example::theme::{BAD, DIM, GOOD};
 use bevy_neura_example::ui::{at, bottom, right, text};
@@ -17,50 +16,22 @@ const CHART_LEFT: f32 = 20.0;
 const CHART_BOTTOM: f32 = 92.0;
 const CHART_HEIGHT: f32 = 96.0;
 const CHART_FLOOR: f32 = -150.0;
-const CHART_CEILING: f32 = 250.0;
-const SOLVED: f32 = 200.0;
-const FLASH: u32 = 30;
+const CHART_CEILING: f32 = 350.0;
 
-#[derive(Component, Clone, Copy, PartialEq)]
+#[derive(Component)]
 pub(crate) enum Line {
-    Title,
-    Device,
     Training,
     Showcase,
-    Losses,
-    Hints,
     Banner,
-    Policy,
 }
 
 #[derive(Component)]
 pub(crate) struct Bar(usize);
 
 #[derive(Component)]
-pub(crate) struct Policy(u8);
+pub(crate) struct Meter(usize);
 
-#[derive(Component)]
-pub(crate) struct Flash;
-
-#[derive(Resource)]
-pub struct Hud {
-    device: String,
-    flashed: u32,
-}
-
-pub fn setup(mut commands: Commands, runtime: Res<NeuraRuntime>) {
-    commands.spawn((
-        Flash,
-        Node {
-            position_type: PositionType::Absolute,
-            left: Val::Px(0.0),
-            top: Val::Px(0.0),
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            ..default()
-        },
-        BackgroundColor(Color::NONE),
-    ));
+pub fn setup(mut commands: Commands) {
     commands.spawn((
         Node {
             position_type: PositionType::Absolute,
@@ -72,19 +43,17 @@ pub fn setup(mut commands: Commands, runtime: Res<NeuraRuntime>) {
         },
         BackgroundColor(PANEL),
     ));
-    for (reward, color) in [(SOLVED, GOOD.with_alpha(0.45)), (0.0, DIM.with_alpha(0.7))] {
-        commands.spawn((
-            Node {
-                position_type: PositionType::Absolute,
-                left: Val::Px(CHART_LEFT),
-                bottom: Val::Px(CHART_BOTTOM + share(reward) * CHART_HEIGHT),
-                width: Val::Px(BARS as f32 * BAR_STEP),
-                height: Val::Px(1.0),
-                ..default()
-            },
-            BackgroundColor(color),
-        ));
-    }
+    commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            left: Val::Px(CHART_LEFT),
+            bottom: Val::Px(CHART_BOTTOM + share(0.0) * CHART_HEIGHT),
+            width: Val::Px(BARS as f32 * BAR_STEP),
+            height: Val::Px(1.0),
+            ..default()
+        },
+        BackgroundColor(DIM.with_alpha(0.7)),
+    ));
     for index in 0..BARS {
         commands.spawn((
             Bar(index),
@@ -100,19 +69,35 @@ pub fn setup(mut commands: Commands, runtime: Res<NeuraRuntime>) {
         ));
     }
     commands.spawn((
-        Line::Policy,
-        Text::new("policy"),
+        Text::new(format!("reward of the last {BARS} episodes")),
+        text(12.0, DIM),
+        bottom(CHART_LEFT, CHART_BOTTOM + CHART_HEIGHT + 8.0),
+    ));
+    commands.spawn((
+        Line::Training,
+        Text::new(""),
+        text(15.0, INK),
+        at(16.0, 12.0),
+    ));
+    commands.spawn((
+        Line::Showcase,
+        Text::new(""),
+        text(15.0, INK),
+        right(16.0, 12.0),
+    ));
+    commands.spawn((
+        Text::new("policy of the showcase"),
         text(13.0, DIM),
         right(16.0, 214.0),
     ));
     for action in 0..ACTIONS {
         commands.spawn((
-            Policy(action as u8),
+            Meter(action),
             Node {
                 position_type: PositionType::Absolute,
                 right: Val::Px(150.0),
                 top: Val::Px(238.0 + action as f32 * 17.0),
-                width: Val::Px(56.0),
+                width: Val::Px(0.0),
                 height: Val::Px(11.0),
                 ..default()
             },
@@ -125,36 +110,15 @@ pub fn setup(mut commands: Commands, runtime: Res<NeuraRuntime>) {
         ));
     }
     commands.spawn((
-        Line::Title,
-        Text::new("lunar lander"),
-        text(20.0, INK),
-        at(16.0, 12.0),
-    ));
-    commands.spawn((Line::Device, Text::new(""), text(13.0, DIM), at(16.0, 36.0)));
-    commands.spawn((
-        Line::Training,
-        Text::new(""),
-        text(15.0, INK),
-        at(16.0, 56.0),
-    ));
-    commands.spawn((Line::Losses, Text::new(""), text(15.0, INK), at(16.0, 78.0)));
-    commands.spawn((
-        Line::Showcase,
-        Text::new(""),
-        text(15.0, INK),
-        right(16.0, 12.0),
-    ));
-    commands.spawn((
-        Line::Hints,
         Text::new("space turbo   p pause   r replay"),
         text(15.0, DIM),
-        bottom(CHART_LEFT, 16.0),
+        bottom(16.0, 16.0),
     ));
     commands.spawn((
         Line::Banner,
         Text::new(""),
         TextLayout::justify(Justify::Center),
-        text(32.0, INK),
+        text(26.0, INK),
         Node {
             position_type: PositionType::Absolute,
             width: Val::Percent(100.0),
@@ -162,10 +126,6 @@ pub fn setup(mut commands: Commands, runtime: Res<NeuraRuntime>) {
             ..default()
         },
     ));
-    commands.insert_resource(Hud {
-        device: runtime.context().adapter_info().name.clone(),
-        flashed: 0,
-    });
 }
 
 type Lines<'w, 's> = Query<'w, 's, (&'static Line, &'static mut Text, &'static mut TextColor)>;
@@ -177,75 +137,42 @@ type Bars<'w, 's> = Query<
         &'static mut Node,
         &'static mut BackgroundColor,
     ),
-    (Without<Policy>, Without<Flash>),
 >;
-type PolicyBars<'w, 's> =
-    Query<'w, 's, (&'static Policy, &'static mut Node), (Without<Bar>, Without<Flash>)>;
-type FlashColor<'w, 's> = Query<
-    'w,
-    's,
-    (&'static mut BackgroundColor, &'static mut Visibility),
-    (With<Flash>, Without<Bar>, Without<Policy>),
->;
+type Meters<'w, 's> = Query<'w, 's, (&'static Meter, &'static mut Node), Without<Bar>>;
 
 pub fn paint(
     training: Res<Training>,
     display: Res<Display>,
-    mut hud: ResMut<Hud>,
     mut lines: Lines,
     mut bars: Bars,
-    mut policy: PolicyBars,
-    mut flash: FlashColor,
+    mut meters: Meters,
 ) {
-    let device = hud.device.clone();
     for (line, mut text, mut color) in &mut lines {
         let (drawn, ink) = match line {
-            Line::Title => ("lunar lander".to_string(), INK),
-            Line::Device => (format!("[{}]", device), DIM),
-            Line::Policy => ("policy of the showcase".to_string(), DIM),
             Line::Training => (
                 format!(
-                    "learn   {} samples   {} updates   {:.0}/s   {} episodes   mean {:+.1}   best {:+.1}",
-                    samples(training.samples),
-                    training.updates,
-                    training.steps_per_second,
+                    "training {}   {} episodes   mean {:+.1}",
+                    speed(training.steps),
                     training.episodes,
                     training.mean(),
-                    training.best,
                 ),
                 INK,
             ),
             Line::Showcase => (
                 format!(
-                    "showcase\nepisode {:+.1}   value {:+.1}\nmean {:+.1}   best {:+.1}   landed {} times",
-                    display.returned,
-                    display.value,
-                    display.mean(),
-                    if display.best == f32::MIN {
-                        0.0
-                    } else {
-                        display.best
-                    },
-                    display.episodes,
+                    "showcase   landed {} of {}",
+                    display.landed, display.episodes,
                 ),
                 INK,
             ),
-            Line::Losses => (
-                format!(
-                    "loss {:>7.2}   policy {:>+6.3}   value {:>8.2}   entropy {:.3}   explained {:.2}",
-                    training.diagnostics.loss,
-                    training.diagnostics.policy,
-                    training.diagnostics.value,
-                    training.diagnostics.entropy,
-                    training.explained,
-                ),
-                INK,
-            ),
-            Line::Hints => ("space turbo   p pause   r replay".to_string(), DIM),
             Line::Banner => (banner(&display), banner_ink(&display)),
         };
         text.0 = drawn;
         color.0 = ink;
+    }
+    let probabilities = softmax(&display.logits);
+    for (meter, mut node) in &mut meters {
+        node.width = Val::Px(6.0 + 50.0 * probabilities[meter.0]);
     }
     let history = &training.history;
     for (bar, mut node, mut background) in &mut bars {
@@ -260,42 +187,22 @@ pub fn paint(
         let at = share(reward);
         node.bottom = Val::Px(CHART_BOTTOM + zero.min(at) * CHART_HEIGHT);
         node.height = Val::Px((at - zero).abs() * CHART_HEIGHT);
-        background.0 = if reward >= SOLVED {
-            GOOD
-        } else if reward >= 0.0 {
-            GOOD.with_alpha(0.9)
-        } else {
-            BAD.with_alpha(0.95)
-        };
+        background.0 = if reward >= 0.0 { GOOD } else { BAD };
     }
-    let probabilities = softmax(&display.logits);
-    for (bar, mut node) in &mut policy {
-        node.width = Val::Px(6.0 + 50.0 * probabilities[bar.0 as usize]);
+}
+
+fn speed(steps: u32) -> String {
+    match steps {
+        0 => "paused".to_string(),
+        steps => format!("x{steps}"),
     }
-    let (mut color, mut place) = flash.single_mut().expect("the screen shows one flash");
-    if display.fresh() && hud.flashed == 0 {
-        hud.flashed = FLASH;
-    }
-    if hud.flashed == 0 {
-        *place = Visibility::Hidden;
-        color.0 = Color::NONE;
-        return;
-    }
-    hud.flashed -= 1;
-    let fade = hud.flashed as f32 / FLASH as f32;
-    *place = Visibility::Inherited;
-    color.0 = match display.ending {
-        Some(Ending::Landed) => Color::srgba(0.4, 1.0, 0.5, 0.2 * fade),
-        Some(_) => Color::srgba(1.0, 0.35, 0.35, 0.24 * fade),
-        None => Color::NONE,
-    };
 }
 
 fn banner(display: &Display) -> String {
     match display.ending {
-        Some(Ending::Landed) => "landed   +100".to_string(),
-        Some(Ending::Crashed) => "crashed   -100".to_string(),
-        Some(Ending::Departed) => "lost in space   -100".to_string(),
+        Some(Ending::Landed) => "landed".to_string(),
+        Some(Ending::Crashed) => "crashed".to_string(),
+        Some(Ending::Departed) => "lost in space".to_string(),
         None => String::new(),
     }
 }
@@ -310,12 +217,4 @@ fn banner_ink(display: &Display) -> Color {
 
 fn share(reward: f32) -> f32 {
     ((reward - CHART_FLOOR) / (CHART_CEILING - CHART_FLOOR)).clamp(0.0, 1.0)
-}
-
-fn samples(count: u64) -> String {
-    match count {
-        0..=9_999 => count.to_string(),
-        10_000..=999_999 => format!("{:.0}k", count as f64 / 1e3),
-        _ => format!("{:.2}M", count as f64 / 1e6),
-    }
 }
