@@ -4,6 +4,7 @@ mod learner;
 mod loading;
 mod net;
 mod replay;
+mod results;
 mod training;
 mod view;
 
@@ -16,7 +17,7 @@ use bevy_neura_example::stage;
 const TITLE: &str = "tic tac toe";
 const DEVICE_HEAP: u64 = 1 << 28;
 const READBACK: u64 = 1 << 20;
-const WINDOW: (u32, u32) = (480, 500);
+const WINDOW: (u32, u32) = (800, 480);
 
 fn main() {
     App::new()
@@ -32,7 +33,12 @@ fn main() {
         .add_systems(OnEnter(Phase::Ready), view::setup)
         .add_systems(
             Update,
-            (game::advance, game::click, view::paint)
+            (
+                game::advance,
+                game::click,
+                view::paint_board,
+                view::paint_dashboard,
+            )
                 .chain()
                 .run_if(in_state(Phase::Ready)),
         )

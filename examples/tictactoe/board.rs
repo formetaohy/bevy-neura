@@ -23,10 +23,10 @@ const LINES: [[usize; 3]; 8] = [
 ];
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Outcome {
-    Ongoing,
-    Won,
-    Drawn,
+pub enum Ending {
+    XWins,
+    OWins,
+    Draw,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -47,6 +47,10 @@ impl Board {
         &self.cells
     }
 
+    pub fn moves(&self) -> u32 {
+        self.cells.iter().filter(|mark| **mark != 0).count() as u32
+    }
+
     pub fn perspective(&self) -> [f32; CELLS] {
         self.cells.map(|mark| f32::from(mark * self.turn))
     }
@@ -55,22 +59,26 @@ impl Board {
         (0..CELLS).filter(|at| self.cells[*at] == 0)
     }
 
-    pub fn play(&mut self, at: usize) -> Outcome {
+    pub fn play(&mut self, at: usize) -> Option<Ending> {
         assert!(
             at < CELLS && self.cells[at] == 0,
             "cell {at} holds {} and takes no mark",
             self.cells[at],
         );
         self.cells[at] = self.turn;
-        let outcome = if self.wins(self.turn) {
-            Outcome::Won
+        let ending = if self.wins(self.turn) {
+            Some(if self.turn == 1 {
+                Ending::XWins
+            } else {
+                Ending::OWins
+            })
         } else if self.cells.iter().all(|mark| *mark != 0) {
-            Outcome::Drawn
+            Some(Ending::Draw)
         } else {
-            Outcome::Ongoing
+            None
         };
         self.turn = -self.turn;
-        outcome
+        ending
     }
 
     fn wins(&self, mark: i8) -> bool {

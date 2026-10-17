@@ -1,7 +1,8 @@
-use crate::board::{Board, CELLS, Outcome};
+use crate::board::{Board, CELLS, Ending};
 use crate::learner::{BATCH, Learner};
 use crate::net::{BOUND, Player};
 use crate::replay::{Replay, Transition};
+use crate::results::Results;
 use bevy_neura::NeuraRuntime;
 use bevy_neura_example::random::Random;
 
@@ -21,7 +22,7 @@ pub struct Training {
     player: Player,
     replay: Replay,
     random: Random,
-    games: u32,
+    results: Results,
 }
 
 impl Training {
@@ -33,23 +34,27 @@ impl Training {
             player,
             replay: Replay::new(REPLAY),
             random: Random::seeded(SEED),
-            games: 0,
+            results: Results::new(TOTAL_GAMES),
         }
     }
 
+    pub fn results(&self) -> &Results {
+        &self.results
+    }
+
     pub fn progress(&self) -> f32 {
-        (self.games as f32 / TOTAL_GAMES as f32).clamp(0.0, 1.0)
+        (self.results.completed() as f32 / TOTAL_GAMES as f32).clamp(0.0, 1.0)
     }
 
     pub fn done(&self) -> bool {
-        self.games >= TOTAL_GAMES
+        self.results.completed() >= TOTAL_GAMES
     }
 
     pub fn advance(&mut self, runtime: &NeuraRuntime) {
         if self.done() {
             return;
         }
-        let games = GAMES_PER_FRAME.min(TOTAL_GAMES - self.games);
+        let games = GAMES_PER_FRAME.min(TOTAL_GAMES - self.results.completed());
         self.play(runtime, games);
         for _ in 0..UPDATES {
             self.learn(runtime);
@@ -66,6 +71,7 @@ impl Training {
     fn play(&mut self, runtime: &NeuraRuntime, games: u32) {
         let mut boards = vec![Board::start(); games as usize];
         let mut active = (0..boards.len()).collect::<Vec<_>>();
+        let epsilon = self.epsilon();
         while !active.is_empty() {
             let rows = active.len() as u32;
             let mut states = Vec::with_capacity(rows as usize * CELLS);
@@ -73,7 +79,6 @@ impl Training {
                 states.extend_from_slice(&boards[*index].perspective());
             }
             let q = self.player.q(runtime, &states, rows);
-            let epsilon = self.epsilon();
             let mut following = Vec::with_capacity(active.len());
             for (row, index) in active.into_iter().enumerate() {
                 let board = &mut boards[index];
@@ -85,12 +90,12 @@ impl Training {
                     best(&q[row * CELLS..(row + 1) * CELLS], &legal)
                 };
                 let state = board.perspective();
-                let outcome = board.play(action);
+                let ending = board.play(action);
                 let after = board.perspective();
-                let (reward, done) = match outcome {
-                    Outcome::Won => (1.0, true),
-                    Outcome::Drawn => (0.0, true),
-                    Outcome::Ongoing => (0.0, false),
+                let (reward, done) = match ending {
+                    Some(Ending::XWins | Ending::OWins) => (1.0, true),
+                    Some(Ending::Draw) => (0.0, true),
+                    None => (0.0, false),
                 };
                 self.replay.push(Transition {
                     state,
@@ -99,13 +104,14 @@ impl Training {
                     reward,
                     done,
                 });
-                if !done {
+                if let Some(ending) = ending {
+                    self.results.record(ending, board.moves());
+                } else {
                     following.push(index);
                 }
             }
             active = following;
         }
-        self.games += games;
     }
 
     fn learn(&mut self, runtime: &NeuraRuntime) {
