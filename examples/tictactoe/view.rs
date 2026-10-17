@@ -157,7 +157,16 @@ pub fn setup(mut commands: Commands) {
                                     });
                             }
                         });
-                        left.spawn((Status, Text::new("your move"), ui::text(17.0, DIM)));
+                        left.spawn((
+                            Node {
+                                height: Val::Px(30.0),
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::Center,
+                                ..default()
+                            },
+                            Pickable::IGNORE,
+                            children![(Status, Text::new("your move"), ui::text(17.0, DIM))],
+                        ));
                     });
                     row.spawn((
                         Dashboard,
