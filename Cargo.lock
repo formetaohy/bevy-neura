@@ -375,6 +375,7 @@ name = "bevy-neura"
 version = "0.7.4"
 dependencies = [
  "bevy",
+ "bevy-neura-example",
  "cpal",
  "flate2",
  "hound",
@@ -384,6 +385,14 @@ dependencies = [
  "safetensors",
  "serde_json",
  "wgpu",
+]
+
+[[package]]
+name = "bevy-neura-example"
+version = "0.0.0"
+dependencies = [
+ "bevy",
+ "neura",
 ]
 
 [[package]]

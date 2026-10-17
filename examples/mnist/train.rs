@@ -1,9 +1,9 @@
 use crate::dataset::Dataset;
 use crate::digit;
 use crate::learner::{BATCH, Learner};
-use crate::random::Random;
 use crate::recognizer::Recognizer;
 use bevy_neura::NeuraRuntime;
+use bevy_neura_example::random::Random;
 use neura::CheckpointFile;
 use std::path::{Path, PathBuf};
 

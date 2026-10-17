@@ -1,4 +1,4 @@
-use crate::random::Random;
+use bevy_neura_example::random::Random;
 
 pub const DIGITS: u32 = 10;
 

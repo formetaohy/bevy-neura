@@ -1,5 +1,6 @@
 [workspace]
 resolver = "3"
+members = [".", "examples/common"]
 
 [workspace.package]
 version = "0.7.4"
@@ -38,6 +39,7 @@ debug-assertions = false
 
 [dev-dependencies]
 bevy = { version = "0.19.1", default-features = false, features = ["2d", "ui", "system_font_discovery"] }
+bevy-neura-example = { path = "examples/common" }
 cpal = "0.18"
 flate2 = "1.1.10"
 hound = "3.5"

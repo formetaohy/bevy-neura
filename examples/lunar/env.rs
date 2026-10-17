@@ -1,10 +1,10 @@
 use crate::body::{Body, HULL, LEFT_LEG, Part, RIGHT_LEG};
 use crate::particles::Particles;
-use crate::random::Random;
 use crate::shape::Polygon;
 use crate::terrain::{self, Terrain};
 use crate::world::World;
 use bevy::math::Vec2;
+use bevy_neura_example::random::Random;
 
 pub const FPS: f32 = 50.0;
 pub const STEP: f32 = 1.0 / FPS;

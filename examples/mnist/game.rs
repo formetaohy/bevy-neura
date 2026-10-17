@@ -2,12 +2,12 @@ use crate::canvas::{self, Canvas};
 use crate::digit::Digit;
 use crate::ink::Ink;
 use crate::puzzle::Puzzle;
-use crate::random::Random;
 use crate::recognizer::{Guess, Recognizer};
 use crate::view::CanvasNode;
 use bevy::picking::backend::HitData;
 use bevy::prelude::*;
 use bevy_neura::NeuraRuntime;
+use bevy_neura_example::random::Random;
 
 const READ_DELAY: f32 = 0.6;
 const HOLD: f32 = 1.0;

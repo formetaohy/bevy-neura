@@ -2,6 +2,7 @@ use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use bevy::sprite_render::AlphaMode2d;
+use bevy_neura_example::random::Random;
 use std::f32::consts::TAU;
 
 const ROWS: u32 = 72;
@@ -45,7 +46,7 @@ pub fn setup(
         MeshMaterial2d(materials.add(blend(Color::WHITE))),
         Transform::from_xyz(10.0, 0.0, BAND_LAYER),
     ));
-    let mut random = crate::random::Random::seeded(0x5c17_e510);
+    let mut random = Random::seeded(0x5c17_e510);
     for _ in 0..STARS {
         let tint = STAR_TINTS[random.below(STAR_TINTS.len())];
         commands.spawn((

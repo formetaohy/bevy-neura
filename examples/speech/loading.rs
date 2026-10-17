@@ -1,11 +1,12 @@
-use crate::Phase;
-use crate::common::Loading;
 use crate::microphone::Microphone;
 use crate::model::{DecoderModel, EncoderModel};
-use crate::source::{self, Report};
+use crate::source;
 use crate::speech::{Checkpoint, Speech};
 use bevy::prelude::*;
 use bevy_neura::NeuraRuntime;
+use bevy_neura_example::app::Phase;
+use bevy_neura_example::loading::Loading;
+use bevy_neura_example::transfer::Transfer;
 
 const PLAN: [(&str, f32); 5] = [
     ("downloading the checkpoint", 0.6),
@@ -17,7 +18,7 @@ const PLAN: [(&str, f32); 5] = [
 
 #[derive(Resource)]
 pub(crate) struct Pending {
-    transfer: Option<source::Transfer>,
+    transfer: Option<Transfer>,
     checkpoint: Option<Checkpoint>,
     encoder: Option<EncoderModel>,
     decoder: Option<DecoderModel>,
@@ -26,7 +27,7 @@ pub(crate) struct Pending {
 pub fn setup(mut commands: Commands) {
     commands.insert_resource(Loading::of(&PLAN));
     commands.insert_resource(Pending {
-        transfer: source::Transfer::start(&source::directory()),
+        transfer: Transfer::start(&source::directory(), source::artifacts()),
         checkpoint: None,
         encoder: None,
         decoder: None,
@@ -44,19 +45,7 @@ pub fn drive(
         return;
     }
     match page.index() {
-        0 => match pending.transfer.as_ref().map(source::Transfer::report) {
-            None => page.report(1.0),
-            Some(Report::Done) => {
-                pending.transfer = None;
-                page.report(1.0);
-            }
-            Some(Report::Failed(error)) => panic!("the checkpoint does not download: {error}"),
-            Some(Report::Measuring) => page.report(0.0),
-            Some(Report::Fetching { done, total }) if total > 0 => {
-                page.report(done as f32 / total as f32);
-            }
-            Some(Report::Fetching { .. }) => page.report(0.0),
-        },
+        0 => page.follow(&mut pending.transfer),
         1 => {
             pending.checkpoint = Some(Checkpoint::read(&source::directory()));
             page.report(1.0);

@@ -1,0 +1,18 @@
+[package]
+name = "bevy-neura-example"
+version = "0.0.0"
+edition.workspace = true
+description = "Shared scaffolding of the bevy-neura examples"
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+bevy = { version = "0.19.1", default-features = false, features = ["std", "multi_threaded", "bevy_render", "2d", "ui", "system_font_discovery"] }
+neura = "0.7.4"
+
+[lints]
+workspace = true

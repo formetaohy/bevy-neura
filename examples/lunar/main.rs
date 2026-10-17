@@ -1,6 +1,3 @@
-#[path = "../common/mod.rs"]
-mod common;
-
 mod body;
 mod contact;
 mod craft;
@@ -14,7 +11,6 @@ mod loading;
 mod net;
 mod particles;
 mod policy;
-mod random;
 mod rollout;
 mod shape;
 mod sky;
@@ -24,45 +20,21 @@ mod world;
 
 use bevy::camera::ScalingMode;
 use bevy::prelude::*;
-use bevy::render::pipelined_rendering::PipelinedRenderingPlugin;
 use bevy_neura::NeuraPlugin;
-use neura::{MemoryRequest, RuntimeRequest};
+use bevy_neura_example::app::{self, Phase};
+use bevy_neura_example::loading::LoadingPlugin;
 
 const DEVICE_HEAP: u64 = 1 << 28;
 const READBACK: u64 = 1 << 22;
 const WINDOW: (u32, u32) = (1000, 680);
-
-#[derive(States, Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
-enum Phase {
-    #[default]
-    Loading,
-    Ready,
-}
+const TITLE: &str = "lunar lander";
 
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: "lunar lander".to_string(),
-                        resolution: WINDOW.into(),
-                        ..default()
-                    }),
-                    ..default()
-                })
-                .build()
-                .disable::<PipelinedRenderingPlugin>(),
-            NeuraPlugin::of(RuntimeRequest {
-                memory: MemoryRequest {
-                    heap_bytes: DEVICE_HEAP,
-                    readback_bytes: READBACK,
-                    readback_slots: 4,
-                    ..MemoryRequest::default()
-                },
-                ..RuntimeRequest::default()
-            }),
-            common::LoadingPlugin::new(Phase::Loading, "lunar lander"),
+            app::windowed(TITLE, WINDOW),
+            NeuraPlugin::of(app::request(DEVICE_HEAP, READBACK)),
+            LoadingPlugin::new(Phase::Loading, TITLE),
         ))
         .init_state::<Phase>()
         .insert_resource(ClearColor(Color::srgb(0.01, 0.012, 0.03)))

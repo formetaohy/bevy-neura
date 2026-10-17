@@ -1,12 +1,6 @@
-use crate::archive::Archive;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Arc, Mutex};
-
-const ENDPOINTS: [&str; 2] = [
-    "https://storage.googleapis.com/cvdf-datasets/mnist",
-    "https://ossci-datasets.s3.amazonaws.com/mnist",
-];
 
 #[derive(Clone, Debug)]
 pub enum Report {
@@ -14,6 +8,26 @@ pub enum Report {
     Fetching { done: u64, total: u64 },
     Done,
     Failed(String),
+}
+
+pub struct Artifact {
+    name: String,
+    urls: Vec<String>,
+}
+
+impl Artifact {
+    pub fn of(name: &str, urls: impl IntoIterator<Item = String>) -> Self {
+        let urls = urls.into_iter().collect::<Vec<String>>();
+        assert!(!urls.is_empty(), "the artifact {name} names no host");
+        Self {
+            name: name.to_string(),
+            urls,
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }
 
 enum State {
@@ -34,15 +48,19 @@ pub struct Transfer {
 }
 
 impl Transfer {
-    pub fn start(directory: &Path) -> Self {
-        let missing = Archive::ALL
-            .into_iter()
-            .filter(|archive| !directory.join(archive.name()).is_file())
-            .collect::<Vec<Archive>>();
+    pub fn start(directory: &Path, artifacts: Vec<Artifact>) -> Option<Self> {
         assert!(
-            !missing.is_empty(),
-            "a transfer of the digits carries archives no host holds",
+            !artifacts.is_empty(),
+            "a transfer carries no artifact of {}",
+            directory.display(),
         );
+        let missing = artifacts
+            .into_iter()
+            .filter(|artifact| !directory.join(artifact.name()).is_file())
+            .collect::<Vec<Artifact>>();
+        if missing.is_empty() {
+            return None;
+        }
         std::fs::create_dir_all(directory)
             .unwrap_or_else(|error| panic!("no directory of {}: {error}", directory.display()));
         let shared = Arc::new(Mutex::new(Shared {
@@ -52,8 +70,8 @@ impl Transfer {
         }));
         let worker = Arc::clone(&shared);
         let directory = directory.to_path_buf();
-        std::thread::spawn(move || transfer(&directory, missing, &worker));
-        Self { shared }
+        std::thread::spawn(move || transfer(&directory, &missing, &worker));
+        Some(Self { shared })
     }
 
     pub fn report(&self) -> Report {
@@ -73,24 +91,19 @@ impl Transfer {
     }
 }
 
-fn transfer(directory: &Path, missing: Vec<Archive>, shared: &Mutex<Shared>) {
-    let total = missing
-        .iter()
-        .map(|archive| expected(*archive))
-        .sum::<u64>();
+fn transfer(directory: &Path, missing: &[Artifact], shared: &Mutex<Shared>) {
+    let sizes = missing.iter().map(expected).collect::<Vec<u64>>();
+    let total = sizes.iter().sum::<u64>();
     set(shared, State::Fetching { total });
     let mut done = 0u64;
-    for archive in &missing {
-        let target = directory.join(archive.name());
+    for (artifact, known) in missing.iter().zip(sizes) {
+        let target = directory.join(artifact.name());
         let part = target.with_extension("part");
         note(shared, done, part.clone());
-        let length = match fetch(*archive, &part) {
-            Ok(length) => length,
-            Err(error) => {
-                set(shared, State::Failed(error));
-                return;
-            }
-        };
+        if let Err(error) = fetch(artifact, &part) {
+            set(shared, State::Failed(error));
+            return;
+        }
         if let Err(error) = std::fs::rename(&part, &target) {
             set(
                 shared,
@@ -98,30 +111,30 @@ fn transfer(directory: &Path, missing: Vec<Archive>, shared: &Mutex<Shared>) {
             );
             return;
         }
-        done += length;
+        done += if known > 0 { known } else { size(&target) };
         note(shared, done, PathBuf::new());
     }
     set(shared, State::Done);
 }
 
-fn expected(archive: Archive) -> u64 {
-    ENDPOINTS
+fn expected(artifact: &Artifact) -> u64 {
+    artifact
+        .urls
         .iter()
-        .filter_map(|endpoint| length(&url(endpoint, archive)))
+        .filter_map(|url| length(url))
         .max()
         .unwrap_or(0)
 }
 
-fn fetch(archive: Archive, part: &Path) -> Result<u64, String> {
+fn fetch(artifact: &Artifact, part: &Path) -> Result<(), String> {
     let mut refused = Vec::new();
-    for endpoint in ENDPOINTS {
-        let url = url(endpoint, archive);
-        match download(&url, part) {
-            Ok(()) => return Ok(size(part)),
+    for url in &artifact.urls {
+        match download(url, part) {
+            Ok(()) => return Ok(()),
             Err(error) => refused.push(error),
         }
     }
-    Err(format!("{}: {}", archive.name(), refused.join("; ")))
+    Err(format!("{}: {}", artifact.name(), refused.join("; ")))
 }
 
 fn note(shared: &Mutex<Shared>, done: u64, part: PathBuf) {
@@ -135,10 +148,6 @@ fn set(shared: &Mutex<Shared>, state: State) {
         .lock()
         .unwrap_or_else(|error| error.into_inner())
         .state = state;
-}
-
-fn url(endpoint: &str, archive: Archive) -> String {
-    format!("{endpoint}/{}", archive.name())
 }
 
 fn download(url: &str, part: &Path) -> Result<(), String> {

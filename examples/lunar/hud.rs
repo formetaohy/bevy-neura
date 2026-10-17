@@ -4,12 +4,12 @@ use crate::policy::ACTIONS;
 use crate::train::Training;
 use bevy::prelude::*;
 use bevy_neura::NeuraRuntime;
+use bevy_neura_example::probability::softmax;
+use bevy_neura_example::theme::{BAD, DIM, GOOD};
+use bevy_neura_example::ui::{at, bottom, right, text};
 
 const INK: Color = Color::srgb(0.78, 0.82, 0.94);
-const DIM: Color = Color::srgb(0.55, 0.6, 0.76);
 const HOT: Color = Color::srgb(0.98, 0.7, 0.32);
-const GOOD: Color = Color::srgb(0.45, 0.86, 0.55);
-const BAD: Color = Color::srgb(0.9, 0.42, 0.42);
 const PANEL: Color = Color::srgba(0.05, 0.06, 0.12, 0.72);
 const BARS: usize = 96;
 const BAR_STEP: f32 = 2.4;
@@ -148,7 +148,7 @@ pub fn setup(mut commands: Commands, runtime: Res<NeuraRuntime>) {
         Line::Hints,
         Text::new("space turbo   p pause   r replay"),
         text(15.0, DIM),
-        bottom(16.0),
+        bottom(CHART_LEFT, 16.0),
     ));
     commands.spawn((
         Line::Banner,
@@ -291,16 +291,6 @@ pub fn paint(
     };
 }
 
-fn softmax(logits: &[f32]) -> Vec<f32> {
-    let highest = logits.iter().copied().fold(f32::MIN, f32::max);
-    let weights = logits
-        .iter()
-        .map(|logit| (logit - highest).exp())
-        .collect::<Vec<f32>>();
-    let total = weights.iter().sum::<f32>();
-    weights.into_iter().map(|weight| weight / total).collect()
-}
-
 fn banner(display: &Display) -> String {
     match display.ending {
         Some(Ending::Landed) => "landed   +100".to_string(),
@@ -327,42 +317,5 @@ fn samples(count: u64) -> String {
         0..=9_999 => count.to_string(),
         10_000..=999_999 => format!("{:.0}k", count as f64 / 1e3),
         _ => format!("{:.2}M", count as f64 / 1e6),
-    }
-}
-
-fn text(size: f32, color: Color) -> (TextFont, TextColor) {
-    (
-        TextFont {
-            font_size: FontSize::Px(size),
-            ..default()
-        },
-        TextColor(color),
-    )
-}
-
-fn at(left: f32, top: f32) -> Node {
-    Node {
-        position_type: PositionType::Absolute,
-        left: Val::Px(left),
-        top: Val::Px(top),
-        ..default()
-    }
-}
-
-fn right(right: f32, top: f32) -> Node {
-    Node {
-        position_type: PositionType::Absolute,
-        right: Val::Px(right),
-        top: Val::Px(top),
-        ..default()
-    }
-}
-
-fn bottom(bottom: f32) -> Node {
-    Node {
-        position_type: PositionType::Absolute,
-        left: Val::Px(CHART_LEFT),
-        bottom: Val::Px(bottom),
-        ..default()
     }
 }

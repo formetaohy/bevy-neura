@@ -12,8 +12,6 @@ mod net;
 mod particles;
 #[path = "../examples/lunar/policy.rs"]
 mod policy;
-#[path = "../examples/lunar/random.rs"]
-mod random;
 #[path = "../examples/lunar/rollout.rs"]
 mod rollout;
 #[path = "../examples/lunar/shape.rs"]
@@ -29,6 +27,7 @@ mod common;
 
 use bevy::prelude::*;
 use bevy_neura::NeuraRuntime;
+use bevy_neura_example::random::Random;
 use body::{Body, Part};
 use env::{Action, Ending, Lander, OBSERVATION, STEP};
 use neura::MemoryRequest;
@@ -116,7 +115,7 @@ fn every_step_of_an_episode_scores_its_shaping_its_fuel_or_its_end() {
 
 #[test]
 fn a_body_of_the_sky_falls_at_the_gravity_of_the_moon() {
-    let mut world = World::new(Terrain::generated(&mut random::Random::seeded(7)));
+    let mut world = World::new(Terrain::generated(&mut Random::seeded(7)));
     let body = world.add(Body::at_origin(
         vec![Part::hull(
             Polygon::boxed(bevy::math::Vec2::splat(0.2)),

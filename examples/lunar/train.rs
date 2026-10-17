@@ -1,10 +1,10 @@
 use crate::env::{Action, Lander, OBSERVATION};
 use crate::learner::{Diagnostics, GAMMA, LAMBDA, Learner};
 use crate::policy::Sampler;
-use crate::random::Random;
 use crate::rollout::{ENVS, Record, Rollout};
 use bevy::prelude::*;
 use bevy_neura::NeuraRuntime;
+use bevy_neura_example::random::Random;
 use std::time::Duration;
 
 const SEED: u64 = 0x5eed_0001;

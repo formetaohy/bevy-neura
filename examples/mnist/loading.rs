@@ -1,12 +1,12 @@
-use crate::Phase;
 use crate::archive;
-use crate::common::Loading;
 use crate::dataset::{Archives, Dataset};
 use crate::game::Game;
-use crate::source::{Report, Transfer};
 use crate::train::{Progress, Training};
 use bevy::prelude::*;
 use bevy_neura::NeuraRuntime;
+use bevy_neura_example::app::Phase;
+use bevy_neura_example::loading::Loading;
+use bevy_neura_example::transfer::Transfer;
 
 const PLAN: [(&str, f32); 4] = [
     ("downloading", 0.16),
@@ -26,7 +26,11 @@ pub(crate) struct Pending {
 pub fn setup(mut commands: Commands) {
     let directory = archive::directory();
     let cached = archive::checkpoint().is_file();
-    let transfer = (!cached && !archive::held(&directory)).then(|| Transfer::start(&directory));
+    let transfer = if cached {
+        None
+    } else {
+        Transfer::start(&directory, archive::artifacts())
+    };
     commands.insert_resource(Loading::of(&PLAN));
     commands.insert_resource(Pending {
         cached,
@@ -47,19 +51,7 @@ pub fn drive(
         return;
     }
     match page.index() {
-        0 => match pending.transfer.as_ref().map(Transfer::report) {
-            None => page.report(1.0),
-            Some(Report::Done) => {
-                pending.transfer = None;
-                page.report(1.0);
-            }
-            Some(Report::Failed(error)) => panic!("the digits do not download: {error}"),
-            Some(Report::Measuring) => page.report(0.0),
-            Some(Report::Fetching { done, total }) if total > 0 => {
-                page.report(done as f32 / total as f32);
-            }
-            Some(Report::Fetching { .. }) => page.report(0.0),
-        },
+        0 => page.follow(&mut pending.transfer),
         1 => {
             if !pending.cached {
                 pending.archives = Some(archive::unpack(&archive::directory()));

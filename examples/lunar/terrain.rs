@@ -1,5 +1,5 @@
-use crate::random::Random;
 use bevy::math::Vec2;
+use bevy_neura_example::random::Random;
 
 pub const WIDTH: f32 = 20.0;
 pub const HEIGHT: f32 = 40.0 / 3.0;

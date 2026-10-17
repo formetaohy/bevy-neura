@@ -1,6 +1,12 @@
 use crate::dataset::Archives;
+use bevy_neura_example::transfer::Artifact;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+
+const ENDPOINTS: [&str; 2] = [
+    "https://storage.googleapis.com/cvdf-datasets/mnist",
+    "https://ossci-datasets.s3.amazonaws.com/mnist",
+];
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Archive {
@@ -38,10 +44,18 @@ pub fn checkpoint() -> PathBuf {
     directory().join("lenet.neura")
 }
 
-pub fn held(directory: &Path) -> bool {
+pub fn artifacts() -> Vec<Artifact> {
     Archive::ALL
         .into_iter()
-        .all(|archive| directory.join(archive.name()).is_file())
+        .map(|archive| {
+            Artifact::of(
+                archive.name(),
+                ENDPOINTS
+                    .iter()
+                    .map(|endpoint| format!("{endpoint}/{}", archive.name())),
+            )
+        })
+        .collect()
 }
 
 pub fn unpack(directory: &Path) -> Archives {

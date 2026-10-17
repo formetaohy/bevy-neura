@@ -14,13 +14,12 @@ mod learner;
 mod lenet;
 #[path = "../examples/mnist/puzzle.rs"]
 mod puzzle;
-#[path = "../examples/mnist/random.rs"]
-mod random;
 #[path = "../examples/mnist/recognizer.rs"]
 mod recognizer;
 
 use bevy::prelude::*;
 use bevy_neura::NeuraRuntime;
+use bevy_neura_example::random::Random;
 use dataset::Archives;
 use neura::MemoryRequest;
 use puzzle::Operation;
@@ -112,7 +111,7 @@ fn answers(count: u32) -> Vec<u8> {
 
 #[test]
 fn every_puzzle_asks_for_one_digit() {
-    let mut random = random::Random::seeded(0x5eed_0001);
+    let mut random = Random::seeded(0x5eed_0001);
     let mut held = [0u32; 3];
     for _ in 0..500 {
         let puzzle = puzzle::Puzzle::draw(&mut random);

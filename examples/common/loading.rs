@@ -1,3 +1,6 @@
+use crate::theme::{DIM, TITLE};
+use crate::transfer::{Report, Transfer};
+use crate::ui;
 use bevy::picking::Pickable;
 use bevy::prelude::*;
 
@@ -5,8 +8,6 @@ const WIDTH: f32 = 360.0;
 const TRACK_HEIGHT: f32 = 8.0;
 const TRACK: Color = Color::srgb(0.09, 0.12, 0.19);
 const FILL: Color = Color::srgb(0.36, 0.86, 0.78);
-const TITLE: Color = Color::srgb(0.94, 0.97, 1.0);
-const DIM: Color = Color::srgb(0.55, 0.62, 0.76);
 const SHOWN_AFTER: u32 = 3;
 
 #[derive(Resource)]
@@ -83,6 +84,23 @@ impl Loading {
         self.index += 1;
         self.part = 0.0;
     }
+
+    pub fn follow(&mut self, transfer: &mut Option<Transfer>) {
+        let report = transfer.as_ref().map(Transfer::report);
+        match report {
+            None => self.report(1.0),
+            Some(Report::Done) => {
+                *transfer = None;
+                self.report(1.0);
+            }
+            Some(Report::Failed(error)) => panic!("the artifacts do not download: {error}"),
+            Some(Report::Measuring) => self.report(0.0),
+            Some(Report::Fetching { done, total }) if total > 0 => {
+                self.report(done as f32 / total as f32);
+            }
+            Some(Report::Fetching { .. }) => self.report(0.0),
+        }
+    }
 }
 
 pub struct LoadingPlugin<S: States> {
@@ -127,31 +145,11 @@ enum Part {
 fn screen(commands: &mut Commands, title: &str) {
     commands.spawn((
         Screen,
+        ui::screen(),
         Pickable::IGNORE,
-        Node {
-            position_type: PositionType::Absolute,
-            left: Val::Px(0.0),
-            top: Val::Px(0.0),
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            flex_direction: FlexDirection::Column,
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            row_gap: Val::Px(20.0),
-            ..default()
-        },
         children![
-            (
-                Text::new(title),
-                TextFont::from_font_size(34.0),
-                TextColor(TITLE),
-            ),
-            (
-                Mark(Part::Label),
-                Text::default(),
-                TextFont::from_font_size(18.0),
-                TextColor(DIM),
-            ),
+            (Text::new(title), ui::text(34.0, TITLE)),
+            (Mark(Part::Label), Text::default(), ui::text(18.0, DIM)),
             (
                 Node {
                     width: Val::Px(WIDTH),
@@ -171,12 +169,7 @@ fn screen(commands: &mut Commands, title: &str) {
                     BackgroundColor(FILL),
                 )],
             ),
-            (
-                Mark(Part::Percent),
-                Text::new("0%"),
-                TextFont::from_font_size(18.0),
-                TextColor(DIM),
-            ),
+            (Mark(Part::Percent), Text::new("0%"), ui::text(18.0, DIM)),
         ],
     ));
 }

@@ -3,13 +3,10 @@ use crate::game::Game;
 use bevy::asset::RenderAssetUsages;
 use bevy::picking::Pickable;
 use bevy::prelude::*;
+use bevy_neura_example::theme::{BAD, DIM, GOOD, TITLE};
+use bevy_neura_example::ui;
 use wgpu::{Extent3d, TextureDimension, TextureFormat};
 
-const BACKGROUND: Color = Color::srgb(0.035, 0.045, 0.065);
-const TITLE: Color = Color::srgb(0.94, 0.97, 1.0);
-const DIM: Color = Color::srgb(0.55, 0.62, 0.76);
-const RIGHT: Color = Color::srgb(0.42, 0.85, 0.52);
-const WRONG: Color = Color::srgb(0.95, 0.42, 0.42);
 const PAPER: [f32; 3] = [0.95, 0.95, 0.92];
 const INK: [f32; 3] = [0.07, 0.08, 0.12];
 const HINT: &str = "write the answer in the box";
@@ -32,11 +29,6 @@ pub(crate) struct Paper {
     painted: u32,
 }
 
-pub fn setup(mut commands: Commands) {
-    commands.insert_resource(ClearColor(BACKGROUND));
-    commands.spawn(Camera2d);
-}
-
 pub fn board(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     let side = canvas::SIDE as u32;
     let size = (side * side) as usize;
@@ -56,27 +48,9 @@ pub fn board(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
         painted: u32::MAX,
     });
     commands
-        .spawn((
-            Node {
-                position_type: PositionType::Absolute,
-                left: Val::Px(0.0),
-                top: Val::Px(0.0),
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                flex_direction: FlexDirection::Column,
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::Center,
-                row_gap: Val::Px(20.0),
-                ..default()
-            },
-            Pickable::IGNORE,
-        ))
+        .spawn((ui::screen(), Pickable::IGNORE))
         .with_children(|screen| {
-            screen.spawn((
-                Text::new(HINT),
-                TextFont::from_font_size(17.0),
-                TextColor(DIM),
-            ));
+            screen.spawn((Text::new(HINT), ui::text(17.0, DIM)));
             screen
                 .spawn((
                     Node {
@@ -91,8 +65,7 @@ pub fn board(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
                     row.spawn((
                         Line(Part::Expression),
                         Text::default(),
-                        TextFont::from_font_size(46.0),
-                        TextColor(TITLE),
+                        ui::text(46.0, TITLE),
                     ));
                     row.spawn((
                         CanvasNode,
@@ -115,19 +88,9 @@ pub fn board(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
                     Pickable::IGNORE,
                 ))
                 .with_children(|line| {
-                    line.spawn((
-                        Line(Part::Reading),
-                        Text::default(),
-                        TextFont::from_font_size(24.0),
-                        TextColor(DIM),
-                    ));
+                    line.spawn((Line(Part::Reading), Text::default(), ui::text(24.0, DIM)));
                 });
-            screen.spawn((
-                Line(Part::Score),
-                Text::default(),
-                TextFont::from_font_size(16.0),
-                TextColor(DIM),
-            ));
+            screen.spawn((Line(Part::Score), Text::default(), ui::text(16.0, DIM)));
         });
 }
 
@@ -169,7 +132,7 @@ pub fn paint(
                             guess.digit,
                             guess.confidence * 100.0,
                         ),
-                        RIGHT,
+                        GOOD,
                     ),
                     (Some(guess), Some(false)) => (
                         format!(
@@ -177,7 +140,7 @@ pub fn paint(
                             guess.digit,
                             guess.confidence * 100.0,
                         ),
-                        WRONG,
+                        BAD,
                     ),
                     _ => (String::new(), DIM),
                 };

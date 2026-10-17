@@ -1,5 +1,3 @@
-use crate::Phase;
-use crate::common::Loading;
 use crate::display::Display;
 use crate::learner::Learner;
 use crate::policy::Sampler;
@@ -7,6 +5,8 @@ use crate::rollout::ENVS;
 use crate::train::Training;
 use bevy::prelude::*;
 use bevy_neura::NeuraRuntime;
+use bevy_neura_example::app::Phase;
+use bevy_neura_example::loading::Loading;
 
 const PLAN: [(&str, f32); 3] = [
     ("compiling the policy", 0.5),

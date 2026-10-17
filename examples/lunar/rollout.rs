@@ -1,5 +1,5 @@
 use crate::env::OBSERVATION;
-use crate::random::Random;
+use bevy_neura_example::random::Random;
 
 pub const ENVS: u32 = 64;
 pub const STEPS: u32 = 64;

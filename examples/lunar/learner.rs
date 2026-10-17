@@ -4,9 +4,9 @@ use crate::policy::{
     ACTION_ROLE, ACTIONS, ADVANTAGE_ROLE, ENTROPY_ROLE, LOG_PROBABILITY_ROLE, LOSS_ROLE,
     OBSERVATION_ROLE, POLICY_LOSS_ROLE, RETURN_ROLE, VALUE_LOSS_ROLE,
 };
-use crate::random::Random;
 use crate::rollout::{Batch, ROWS, Rollout};
 use bevy_neura::{Extents, Inputs, Model, ModelPlan, NeuraRuntime, Role, Roles};
+use bevy_neura_example::random::Random;
 use neura::{AdamW, Element, Shape, mse_loss};
 
 pub const MINIBATCH: u32 = 512;
